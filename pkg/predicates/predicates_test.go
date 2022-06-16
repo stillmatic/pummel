@@ -13,8 +13,10 @@ func TestTruePredicate(t *testing.T) {
 	var tp predicates.TruePredicate
 	err := xml.Unmarshal(truePredicateBytes, &tp)
 	assert.NoError(t, err)
-	res := tp.True(map[string]interface{}{"age": 30})
-	assert.True(t, res)
+	res, err := tp.True(map[string]interface{}{"age": 30})
+	assert.NoError(t, err)
+	assert.True(t, res.Valid)
+	assert.True(t, res.ValueOrZero())
 }
 
 func TestFalsePredicate(t *testing.T) {
@@ -22,8 +24,10 @@ func TestFalsePredicate(t *testing.T) {
 	var fp predicates.FalsePredicate
 	err := xml.Unmarshal(falsePredicateBytes, &fp)
 	assert.NoError(t, err)
-	res := fp.True(map[string]interface{}{"age": 30})
-	assert.False(t, res)
+	res, err := fp.True(map[string]interface{}{"age": 30})
+	assert.NoError(t, err)
+	assert.True(t, res.Valid)
+	assert.False(t, res.ValueOrZero())
 }
 
 type predicateInput struct {
@@ -100,9 +104,11 @@ func TestSimplePredicates(t *testing.T) {
 		if err != nil {
 			t.Fatal("could not unmarshal xml")
 		}
-		res := sp.True(test.inputs.features)
-		assert.Equal(t, test.expected, res)
-		if res != test.expected {
+		res, err := sp.True(test.inputs.features)
+		assert.NoError(t, err)
+		assert.True(t, res.Valid, "expected %s %v to be true", sp.Operator, test.inputs.features)
+		assert.Equal(t, test.expected, res.ValueOrZero())
+		if res.ValueOrZero() != test.expected {
 			t.Errorf("error comparing %v versus %v, with %s", sp.Value, test.inputs.features, sp.Operator)
 		}
 	}
@@ -115,9 +121,11 @@ func TestSimpleSetPredicates(t *testing.T) {
 		if err != nil {
 			t.Fatal("could not unmarshal xml")
 		}
-		res := sp.True(test.inputs.features)
-		assert.Equal(t, test.expected, res)
-		if res != test.expected {
+		res, err := sp.True(test.inputs.features)
+		assert.NoError(t, err)
+		assert.True(t, res.Valid)
+		assert.Equal(t, test.expected, res.ValueOrZero())
+		if res.ValueOrZero() != test.expected {
 			t.Errorf("error comparing %v versus %v, with %s", sp.Values, test.inputs.features, sp.Operator)
 		}
 	}
@@ -183,16 +191,109 @@ var compoundPredicateTests = []predicateTest{
 }
 
 func TestCompoundPredicates(t *testing.T) {
-	for _, test := range compoundPredicateTests {
+	for i, test := range compoundPredicateTests {
+		t.Log("TestCompoundPredicates", i)
 		var sp predicates.CompoundPredicate
 		err := xml.Unmarshal(test.inputs.bytes, &sp)
 		if err != nil {
 			t.Fatal("could not unmarshal xml", err)
 		}
-		res := sp.True(test.inputs.features)
-		assert.Equal(t, test.expected, res)
-		if res != test.expected {
+		res, err := sp.True(test.inputs.features)
+		assert.NoError(t, err)
+		assert.Equal(t, test.expected, res.ValueOrZero())
+		if res.ValueOrZero() != test.expected {
 			t.Errorf("error comparing %s with %s", test.inputs.features, sp.Operator)
 		}
+	}
+}
+
+var simplePredicateTestsMissing = []predicateTest{
+	{predicateInput{[]byte(`<SimplePredicate field="age" operator="lessThan" value="30"/>`), map[string]interface{}{}}, false},
+	{predicateInput{[]byte(`<SimplePredicate field="age" operator="lessThan" value="30"/>`), map[string]interface{}{"alphabet": 29.4}}, false},
+}
+
+var simpleSetPredicateTestsMissing = []predicateTest{
+	{predicateInput{[]byte(`
+		<SimpleSetPredicate field="age" booleanOperator="isIn">
+			<Array type="string">29 30</Array>
+		</SimpleSetPredicate>
+	`), map[string]interface{}{}}, false},
+	{predicateInput{[]byte(`		
+	<SimpleSetPredicate field="age" booleanOperator="isIn">
+		<Array type="string">29 30</Array>
+	</SimpleSetPredicate>
+	`), map[string]interface{}{"height": "30"}}, false},
+}
+
+var compoundPredicateTestsMissing = []predicateTest{
+	{predicateInput{[]byte(`
+	<CompoundPredicate booleanOperator="or">
+		<SimplePredicate field="f" operator="equal" value="A"/>
+		<SimplePredicate field="f" operator="equal" value="B"/>
+	</CompoundPredicate>
+	`), map[string]interface{}{"g": "A"}}, false},
+	{predicateInput{[]byte(`
+	<CompoundPredicate booleanOperator="or">
+		<SimplePredicate field="g" operator="equal" value="A"/>
+		<SimplePredicate field="f" operator="equal" value="B"/>
+	</CompoundPredicate>
+	`), map[string]interface{}{"g": "A"}}, true},
+	{predicateInput{[]byte(`
+	<CompoundPredicate booleanOperator="surrogate">
+		<SimplePredicate field="f" operator="equal" value="A"/>
+		<SimplePredicate field="f" operator="equal" value="B"/>
+		<True/>
+	</CompoundPredicate>
+	`), map[string]interface{}{"g": "A"}}, true},
+	{predicateInput{[]byte(`
+	<CompoundPredicate booleanOperator="surrogate">
+		<SimplePredicate field="f" operator="equal" value="A"/>
+		<SimplePredicate field="f" operator="equal" value="B"/>
+		<False/>
+	</CompoundPredicate>
+	`), map[string]interface{}{"g": "A"}}, false},
+}
+
+func TestSimplePredicatesMissing(t *testing.T) {
+	for _, test := range simplePredicateTestsMissing {
+		var sp predicates.SimplePredicate
+		err := xml.Unmarshal(test.inputs.bytes, &sp)
+		if err != nil {
+			t.Fatal("could not unmarshal xml")
+		}
+		res, err := sp.True(test.inputs.features)
+		assert.NoError(t, err)
+		assert.Equal(t, res.Valid, test.expected)
+	}
+}
+
+func TestSimpleSetPredicatesMissing(t *testing.T) {
+	for i, test := range simpleSetPredicateTestsMissing {
+		t.Log("TestSimpleSetPredicatesMissing", i)
+		var sp predicates.SimpleSetPredicate
+		err := xml.Unmarshal(test.inputs.bytes, &sp)
+		if err != nil {
+			t.Fatal("could not unmarshal xml")
+		}
+		t.Log("features", test.inputs.features)
+		t.Log("operator", sp.Operator)
+		res, err := sp.True(test.inputs.features)
+		assert.NoError(t, err)
+		assert.Equal(t, res.Valid, test.expected)
+	}
+}
+
+func TestCompoundPredicatesMissing(t *testing.T) {
+	for i, test := range compoundPredicateTestsMissing {
+		t.Log("TestCompoundPredicatesMissing", i)
+		var sp predicates.CompoundPredicate
+		err := xml.Unmarshal(test.inputs.bytes, &sp)
+		if err != nil {
+			t.Fatal("could not unmarshal xml", err)
+		}
+		res, err := sp.True(test.inputs.features)
+		assert.NoError(t, err)
+		assert.True(t, res.Valid)
+		assert.Equal(t, res.ValueOrZero(), test.expected)
 	}
 }
