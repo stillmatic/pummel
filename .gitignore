@@ -1,0 +1,33 @@
+.henv
+testdata/env
+build
+pkgs
+registry
+bin/hermit.hcl
+.idea/
+.DS_Store
+.gradle/
+docs/resources/_gen
+docs/public
+.gobin/
+.hermit/
+it*/state
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
+go.work
