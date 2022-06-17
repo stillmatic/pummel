@@ -191,8 +191,7 @@ var compoundPredicateTests = []predicateTest{
 }
 
 func TestCompoundPredicates(t *testing.T) {
-	for i, test := range compoundPredicateTests {
-		t.Log("TestCompoundPredicates", i)
+	for _, test := range compoundPredicateTests {
 		var sp predicates.CompoundPredicate
 		err := xml.Unmarshal(test.inputs.bytes, &sp)
 		if err != nil {
@@ -268,15 +267,12 @@ func TestSimplePredicatesMissing(t *testing.T) {
 }
 
 func TestSimpleSetPredicatesMissing(t *testing.T) {
-	for i, test := range simpleSetPredicateTestsMissing {
-		t.Log("TestSimpleSetPredicatesMissing", i)
+	for _, test := range simpleSetPredicateTestsMissing {
 		var sp predicates.SimpleSetPredicate
 		err := xml.Unmarshal(test.inputs.bytes, &sp)
 		if err != nil {
 			t.Fatal("could not unmarshal xml")
 		}
-		t.Log("features", test.inputs.features)
-		t.Log("operator", sp.Operator)
 		res, err := sp.True(test.inputs.features)
 		assert.NoError(t, err)
 		assert.Equal(t, res.Valid, test.expected)
@@ -284,8 +280,7 @@ func TestSimpleSetPredicatesMissing(t *testing.T) {
 }
 
 func TestCompoundPredicatesMissing(t *testing.T) {
-	for i, test := range compoundPredicateTestsMissing {
-		t.Log("TestCompoundPredicatesMissing", i)
+	for _, test := range compoundPredicateTestsMissing {
 		var sp predicates.CompoundPredicate
 		err := xml.Unmarshal(test.inputs.bytes, &sp)
 		if err != nil {

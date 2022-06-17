@@ -7,6 +7,8 @@ require (
 	github.com/stretchr/testify v1.7.2
 )
 
+require golang.org/x/exp v0.0.0-20220613132600-b0d781184e0d // indirect
+
 require (
 	github.com/davecgh/go-spew v1.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // direct
