@@ -19,7 +19,11 @@ type SimpleSetPredicate struct {
 	Values   string   `xml:"Array"`
 }
 
-func (p SimpleSetPredicate) True(features map[string]interface{}) (null.Bool, error) {
+func (p *SimpleSetPredicate) String() string {
+	return fmt.Sprintf("SimpleSetPredicate(%s %s %s)", p.Field, p.Operator, p.Values)
+}
+
+func (p *SimpleSetPredicate) True(features map[string]interface{}) (null.Bool, error) {
 	values, err := shellwords.Parse(p.Values)
 	if err != nil {
 		// returns a null bool if we can't parse this predicate
