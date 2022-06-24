@@ -6,18 +6,12 @@ import (
 
 	"github.com/stillmatic/pummel/pkg/regression"
 	"github.com/stillmatic/pummel/pkg/tree"
-	"gopkg.in/guregu/null.v4"
 )
-
-type Model interface {
-	// TODO: Evaluate can return other things.
-	Evaluate(map[string]interface{}) (null.String, error)
-}
 
 // see https://dmg.org/pmml/v4-3/GeneralStructure.html#xsdGroup_MODEL-ELEMENT
 type ModelElement interface {
-	// TODO: Evaluate can return other things.
-	Evaluate(map[string]interface{}) (null.String, error)
+	Evaluate(map[string]interface{}) (map[string]interface{}, error)
+	GetOutputField() string
 }
 
 type PMMLModel struct {
@@ -43,7 +37,7 @@ type PMMLRegressionModel struct {
 }
 
 // TODO: genericize this.
-func (ptm *PMMLTreeModel) Evaluate(features map[string]interface{}) (null.String, error) {
+func (ptm *PMMLTreeModel) Evaluate(features map[string]interface{}) (map[string]interface{}, error) {
 	return ptm.TreeModel.Evaluate(features)
 }
 

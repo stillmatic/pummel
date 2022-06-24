@@ -75,6 +75,7 @@ func TestParseTree(t *testing.T) {
 	assert.Equal(t, "windy", tm.MiningSchema.MiningFields[2].Name)
 	assert.Equal(t, "outlook", tm.MiningSchema.MiningFields[3].Name)
 	assert.Equal(t, "whatIdo", tm.MiningSchema.MiningFields[4].Name)
+	assert.Equal(t, "whatIdo", tm.GetOutputField())
 
 	inputData := map[string]interface{}{
 		"outlook":     "overcast",
@@ -85,6 +86,5 @@ func TestParseTree(t *testing.T) {
 
 	res, err := tm.Evaluate(inputData)
 	assert.NoError(t, err)
-	assert.True(t, res.Valid)
-	assert.Equal(t, "may play", res.String)
+	assert.Equal(t, "may play", res["whatIdo"])
 }

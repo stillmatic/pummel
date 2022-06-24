@@ -3,9 +3,9 @@ package tree
 import (
 	"encoding/xml"
 
+	"github.com/pkg/errors"
 	ms "github.com/stillmatic/pummel/pkg/miningschema"
 	"github.com/stillmatic/pummel/pkg/node"
-	"gopkg.in/guregu/null.v4"
 )
 
 type TreeModel struct {
@@ -63,20 +63,20 @@ type OutputField struct {
 	Feature     string   `xml:"feature,attr"`
 }
 
-func (t *TreeModel) Evaluate(features map[string]interface{}) (null.String, error) {
+func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interface{}, error) {
 	rootPredRes, err := t.Node.True(features)
 	if err != nil {
-		return null.StringFromPtr(nil), err
+		return nil, err
 	}
 	if !rootPredRes.Valid {
-		return null.StringFromPtr(nil), nil
+		return nil, nil
 	}
 	curr := t.Node
 	for len(curr.Children) > 0 {
 		for _, child := range curr.Children {
 			predRes, err := child.True(features)
 			if err != nil {
-				return null.StringFromPtr(nil), err
+				return nil, errors.Wrapf(err, "failed to evaluate child %s", child)
 			}
 			// handle missing value cases
 			if !predRes.Valid {
@@ -84,11 +84,11 @@ func (t *TreeModel) Evaluate(features map[string]interface{}) (null.String, erro
 				case MissingValueStrategy.LastPrediction:
 					break
 				case MissingValueStrategy.NullPrediction:
-					return null.StringFromPtr(nil), nil
+					return nil, nil
 				case MissingValueStrategy.DefaultChild:
 					curr, err = curr.GetDefaultChild()
 					if err != nil {
-						return null.StringFromPtr(nil), err
+						return nil, err
 					}
 				}
 			}
@@ -98,5 +98,21 @@ func (t *TreeModel) Evaluate(features map[string]interface{}) (null.String, erro
 			}
 		}
 	}
-	return null.StringFrom(curr.Score), nil
+	out := make(map[string]interface{}, 1)
+	out[t.GetOutputField()] = curr.Score
+	return out, nil
+}
+
+func (t *TreeModel) GetOutputField() string {
+	if t.OutputField != nil {
+		return t.OutputField.Name
+	}
+	var out string
+	for _, f := range t.MiningSchema.MiningFields {
+		if f.UsageType == "predicted" {
+			out = f.Name
+			break
+		}
+	}
+	return out
 }

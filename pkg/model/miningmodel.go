@@ -7,17 +7,19 @@ import (
 
 	"github.com/stillmatic/pummel/pkg/miningschema"
 	"github.com/stillmatic/pummel/pkg/predicates"
+	"github.com/stillmatic/pummel/pkg/transformations"
 	"github.com/stillmatic/pummel/pkg/tree"
 )
 
 type MiningModel struct {
-	XMLName       xml.Name                   `xml:"MiningModel"`
-	MiningSchema  *miningschema.MiningSchema `xml:"MiningSchema"`
-	Segmentation  Segmentation               `xml:"Segmentation"`
-	FunctionName  string                     `xml:"functionName,attr"`
-	ModelName     string                     `xml:"modelName,attr"`
-	AlgorithmName string                     `xml:"algorithmName,attr"`
-	IsScorable    bool                       `xml:"isScorable,attr"`
+	XMLName              xml.Name                       `xml:"MiningModel"`
+	MiningSchema         *miningschema.MiningSchema     `xml:"MiningSchema"`
+	Segmentation         Segmentation                   `xml:"Segmentation"`
+	FunctionName         string                         `xml:"functionName,attr"`
+	ModelName            string                         `xml:"modelName,attr"`
+	AlgorithmName        string                         `xml:"algorithmName,attr"`
+	LocalTransformations []transformations.DerivedField `xml:"LocalTransformations"`
+	IsScorable           bool                           `xml:"isScorable,attr"`
 }
 
 type Segmentation struct {
@@ -109,4 +111,20 @@ func (s *Segment) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 			return nil
 		}
 	}
+}
+
+func (s *Segment) Evaluate(values map[string]interface{}) (map[string]interface{}, error) {
+	// out := make(map[string]interface{})
+	for _, p := range s.Predicates {
+		// skip if predicate is not satisfied
+		if predEval, _ := (*p).Evaluate(values); !predEval.ValueOrZero() {
+			return nil, nil
+		}
+	}
+	// res, err := s.ModelElement.Evaluate(values)
+	// if err != nil {
+	// 	return nil, errors.Wrapf(err, "failed to evaluate model element")
+	// }
+	return nil, nil
+
 }

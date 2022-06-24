@@ -101,8 +101,7 @@ func TestParseTreeModel(t *testing.T) {
 
 	res, err := tm.Evaluate(inputData)
 	assert.NoError(t, err)
-	assert.True(t, res.Valid)
-	assert.Equal(t, "may play", res.String)
+	assert.Equal(t, "may play", res[tm.TreeModel.GetOutputField()])
 }
 
 type validateFeatureTestCase struct {
