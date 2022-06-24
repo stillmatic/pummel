@@ -24,6 +24,7 @@ func (p *SimpleSetPredicate) String() string {
 }
 
 func (p *SimpleSetPredicate) Evaluate(features map[string]interface{}) (null.Bool, error) {
+	// TODO: move this into the unmarshal step
 	values, err := shellwords.Parse(p.Values)
 	if err != nil {
 		// returns a null bool if we can't parse this predicate
