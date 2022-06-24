@@ -33,3 +33,17 @@ func TestRegressionTable(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, float64(396.47), out)
 }
+
+func BenchmarkRegressionTable(b *testing.B) {
+	var rt regression.RegressionTable
+	xml.Unmarshal(regressionTableXML, &rt)
+	inputs := map[string]interface{}{
+		"age":              float64(30),
+		"salary":           float64(1000),
+		"car_location":     "carpark",
+		"number_of_claims": float64(0),
+	}
+	for i := 0; i < b.N; i++ {
+		rt.Evaluate(inputs)
+	}
+}

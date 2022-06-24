@@ -61,8 +61,7 @@ func (r *RegressionTable) Evaluate(inputs map[string]interface{}) (float64, erro
 	result := r.Intercept
 	for _, predictor := range r.Predictors {
 		var value float64
-		var err error
-		value, err = (*predictor).Evaluate(inputs)
+		value, err := (*predictor).Evaluate(inputs)
 
 		if err != nil {
 			return 0, err

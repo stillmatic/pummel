@@ -47,7 +47,7 @@ func (cp CategoricalPredictor) Evaluate(inputs map[string]interface{}) (float64,
 
 func (np NumericPredictor) Evaluate(inputs map[string]interface{}) (float64, error) {
 	if value, ok := inputs[np.Name]; ok {
-		return np.Coefficient * math.Pow(float64(value.(float64)), float64(np.Exponent)), nil
+		return np.Coefficient * math.Pow(value.(float64), float64(np.Exponent)), nil
 	}
 	// if the input value is missing, the result evaluates to a missing value.
 	return 0, nil

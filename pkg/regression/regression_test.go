@@ -279,5 +279,47 @@ func TestInteractionTerms(t *testing.T) {
 	assert.NoError(t, err)
 	t.Log(out)
 	assert.InEpsilon(t, float64(-18.455), out["y"], 0.01)
+}
 
+func BenchmarkLinearRegression(b *testing.B) {
+	var prm model.PMMLRegressionModel
+	xml.Unmarshal(logisticRegressionXML, &prm)
+	inputData := map[string]interface{}{
+		"age":          float64(30),
+		"salary":       float64(1000),
+		"car_location": "carpark",
+	}
+	rm := prm.RegressionModel
+	for i := 0; i < b.N; i++ {
+		rm.Evaluate(inputData)
+	}
+}
+
+func BenchmarkPolynomialRegression(b *testing.B) {
+	var prm model.PMMLRegressionModel
+	xml.Unmarshal(polynomialRegressionXML, &prm)
+	inputData := map[string]interface{}{
+		"salary":       float64(1000),
+		"car_location": "carpark",
+	}
+	rm := prm.RegressionModel
+	for i := 0; i < b.N; i++ {
+		rm.Evaluate(inputData)
+	}
+}
+
+func BenchmarkComplexRegression(b *testing.B) {
+	var prm model.PMMLRegressionModel
+	xml.Unmarshal(complexClassificationXML, &prm)
+	inputData := map[string]interface{}{
+		"age":      float64(30),
+		"work":     float64(0.1),
+		"sex":      "0",
+		"minority": "0",
+	}
+	rm := prm.RegressionModel
+
+	for i := 0; i < b.N; i++ {
+		rm.Evaluate(inputData)
+	}
 }
