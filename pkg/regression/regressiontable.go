@@ -2,19 +2,22 @@ package regression
 
 import (
 	"encoding/xml"
+	"fmt"
 	"strconv"
+
+	"github.com/pkg/errors"
 )
 
 type RegressionTable struct {
 	XMLName        xml.Name `xml:"RegressionTable"`
-	Predictors     []Predictor
+	Predictors     []*Predictor
 	Intercept      float64 `xml:"intercept,attr"`
 	TargetCategory string  `xml:"targetCategory,attr"`
 }
 
 func (r *RegressionTable) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	r.XMLName = start.Name
-	r.Predictors = make([]Predictor, 0)
+	r.Predictors = make([]*Predictor, 0)
 	for _, attr := range start.Attr {
 		switch attr.Name.Local {
 		case "intercept":
@@ -33,29 +36,38 @@ func (r *RegressionTable) UnmarshalXML(d *xml.Decoder, start xml.StartElement) e
 			var p Predictor
 			switch tt.Name.Local {
 			case "NumericPredictor":
-				err = d.DecodeElement(&p, &start)
-				if err != nil {
-					return err
-				}
-				r.Predictors = append(r.Predictors, p)
+				// Note that the exponent defaults to 1, hence it is not always necessary to specify.
+				p = &NumericPredictor{Exponent: 1}
 			case "CategoricalPredictor":
-				err = d.DecodeElement(&p, &start)
-				if err != nil {
-					return err
-				}
-				r.Predictors = append(r.Predictors, p)
+				p = &CategoricalPredictor{}
 			case "PredictorTerm":
-				err = d.DecodeElement(&p, &start)
-				if err != nil {
-					return err
+				p = &PredictorTerm{}
+			default:
+				return fmt.Errorf("unknown element type: %s", tt.Name.Local)
+			}
+			if p != nil {
+				if err = d.DecodeElement(&p, &tt); err != nil {
+					return errors.Wrap(err, "error decoding predictor")
 				}
-				r.Predictors = append(r.Predictors, p)
+				r.Predictors = append(r.Predictors, &p)
 			}
 		case xml.EndElement:
-			end := t.(xml.EndElement)
-			if end.Name.Local == "RegressionTable" {
-				return nil
-			}
+			return nil
 		}
 	}
+}
+
+func (r *RegressionTable) Evaluate(inputs map[string]interface{}) (float64, error) {
+	result := r.Intercept
+	for _, predictor := range r.Predictors {
+		var value float64
+		var err error
+		value, err = (*predictor).Evaluate(inputs)
+
+		if err != nil {
+			return 0, err
+		}
+		result += value
+	}
+	return result, nil
 }

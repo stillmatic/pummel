@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 
+	"github.com/stillmatic/pummel/pkg/regression"
 	"github.com/stillmatic/pummel/pkg/tree"
 	"gopkg.in/guregu/null.v4"
 )
@@ -36,6 +37,11 @@ type PMMLTreeModel struct {
 	TreeModel *tree.TreeModel `xml:"TreeModel"`
 }
 
+type PMMLRegressionModel struct {
+	PMMLModel
+	RegressionModel *regression.RegressionModel `xml:"RegressionModel"`
+}
+
 // TODO: genericize this.
 func (ptm *PMMLTreeModel) Evaluate(features map[string]interface{}) (null.String, error) {
 	return ptm.TreeModel.Evaluate(features)
@@ -60,14 +66,12 @@ func (pm *PMMLModel) ValidateFeatures(features map[string]interface{}) (bool, er
 						}
 					}
 					if !found {
-						fmt.Println("invalid value for feature", name, ":", value)
 						return false, fmt.Errorf("invalid value for feature %s: %v", name, value)
 					}
 				}
 			}
 		}
 		if !foundFeature {
-			fmt.Println("unknown feature", name)
 			return false, fmt.Errorf("unknown feature %s", name)
 		}
 	}
