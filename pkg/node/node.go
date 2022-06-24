@@ -134,7 +134,7 @@ func (n *Node) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 }
 
 func (n *Node) True(features map[string]interface{}) (null.Bool, error) {
-	res, err := (*n.Predicate).True(features)
+	res, err := (*n.Predicate).Evaluate(features)
 	return res, err
 }
 

@@ -173,7 +173,7 @@ func TestParseClassificationModel(t *testing.T) {
 	assert.Equal(t, 1, len(seg.Predicates))
 	pred := *seg.Predicates[0]
 	dummyInput := make(map[string]interface{})
-	predRes, err := pred.True(dummyInput)
+	predRes, err := pred.Evaluate(dummyInput)
 	assert.True(t, predRes.ValueOrZero())
 	assert.NoError(t, err)
 	tm := seg.ModelElement

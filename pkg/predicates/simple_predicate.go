@@ -23,7 +23,7 @@ func (p *SimplePredicate) String() string {
 	return fmt.Sprintf("SimplePredicate(%s %s %s)", p.Field, p.Operator, p.Value)
 }
 
-func (p *SimplePredicate) True(features map[string]interface{}) (null.Bool, error) {
+func (p *SimplePredicate) Evaluate(features map[string]interface{}) (null.Bool, error) {
 	featureValue, exists := features[p.Field]
 	if p.Operator == op.Operators.IsMissing {
 		return null.BoolFrom(featureValue == "" || featureValue == nil || !exists), nil

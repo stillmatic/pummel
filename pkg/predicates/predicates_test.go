@@ -13,7 +13,7 @@ func TestTruePredicate(t *testing.T) {
 	var tp predicates.TruePredicate
 	err := xml.Unmarshal(truePredicateBytes, &tp)
 	assert.NoError(t, err)
-	res, err := tp.True(map[string]interface{}{"age": 30})
+	res, err := tp.Evaluate(map[string]interface{}{"age": 30})
 	assert.NoError(t, err)
 	assert.True(t, res.Valid)
 	assert.True(t, res.ValueOrZero())
@@ -24,7 +24,7 @@ func TestFalsePredicate(t *testing.T) {
 	var fp predicates.FalsePredicate
 	err := xml.Unmarshal(falsePredicateBytes, &fp)
 	assert.NoError(t, err)
-	res, err := fp.True(map[string]interface{}{"age": 30})
+	res, err := fp.Evaluate(map[string]interface{}{"age": 30})
 	assert.NoError(t, err)
 	assert.True(t, res.Valid)
 	assert.False(t, res.ValueOrZero())
@@ -104,7 +104,7 @@ func TestSimplePredicates(t *testing.T) {
 		if err != nil {
 			t.Fatal("could not unmarshal xml")
 		}
-		res, err := sp.True(test.inputs.features)
+		res, err := sp.Evaluate(test.inputs.features)
 		assert.NoError(t, err)
 		assert.True(t, res.Valid, "expected %s %v to be true", sp.Operator, test.inputs.features)
 		assert.Equal(t, test.expected, res.ValueOrZero())
@@ -121,7 +121,7 @@ func TestSimpleSetPredicates(t *testing.T) {
 		if err != nil {
 			t.Fatal("could not unmarshal xml")
 		}
-		res, err := sp.True(test.inputs.features)
+		res, err := sp.Evaluate(test.inputs.features)
 		assert.NoError(t, err)
 		assert.True(t, res.Valid)
 		assert.Equal(t, test.expected, res.ValueOrZero())
@@ -197,7 +197,7 @@ func TestCompoundPredicates(t *testing.T) {
 		if err != nil {
 			t.Fatal("could not unmarshal xml", err)
 		}
-		res, err := sp.True(test.inputs.features)
+		res, err := sp.Evaluate(test.inputs.features)
 		assert.NoError(t, err)
 		assert.Equal(t, test.expected, res.ValueOrZero())
 		if res.ValueOrZero() != test.expected {
@@ -260,7 +260,7 @@ func TestSimplePredicatesMissing(t *testing.T) {
 		if err != nil {
 			t.Fatal("could not unmarshal xml")
 		}
-		res, err := sp.True(test.inputs.features)
+		res, err := sp.Evaluate(test.inputs.features)
 		assert.NoError(t, err)
 		assert.Equal(t, res.Valid, test.expected)
 	}
@@ -273,7 +273,7 @@ func TestSimpleSetPredicatesMissing(t *testing.T) {
 		if err != nil {
 			t.Fatal("could not unmarshal xml")
 		}
-		res, err := sp.True(test.inputs.features)
+		res, err := sp.Evaluate(test.inputs.features)
 		assert.NoError(t, err)
 		assert.Equal(t, res.Valid, test.expected)
 	}
@@ -286,7 +286,7 @@ func TestCompoundPredicatesMissing(t *testing.T) {
 		if err != nil {
 			t.Fatal("could not unmarshal xml", err)
 		}
-		res, err := sp.True(test.inputs.features)
+		res, err := sp.Evaluate(test.inputs.features)
 		assert.NoError(t, err)
 		assert.True(t, res.Valid)
 		assert.Equal(t, res.ValueOrZero(), test.expected)

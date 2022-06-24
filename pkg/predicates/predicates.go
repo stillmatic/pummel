@@ -7,7 +7,7 @@ import (
 )
 
 type Predicate interface {
-	True(map[string]interface{}) (null.Bool, error)
+	Evaluate(map[string]interface{}) (null.Bool, error)
 	String() string
 }
 
@@ -21,11 +21,11 @@ type FalsePredicate struct {
 	XMLName xml.Name `xml:"False"`
 }
 
-func (p *TruePredicate) True(map[string]interface{}) (null.Bool, error) {
+func (p *TruePredicate) Evaluate(map[string]interface{}) (null.Bool, error) {
 	return null.BoolFrom(true), nil
 }
 
-func (p *FalsePredicate) True(map[string]interface{}) (null.Bool, error) {
+func (p *FalsePredicate) Evaluate(map[string]interface{}) (null.Bool, error) {
 	return null.BoolFrom(false), nil
 }
 

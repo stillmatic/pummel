@@ -64,13 +64,13 @@ func (cp *CompoundPredicate) UnmarshalXML(d *xml.Decoder, start xml.StartElement
 	}
 }
 
-func (p *CompoundPredicate) True(features map[string]interface{}) (null.Bool, error) {
+func (p *CompoundPredicate) Evaluate(features map[string]interface{}) (null.Bool, error) {
 	// TODO: Refactor this.
 	switch p.Operator {
 	case op.Operators.And:
 		// The operator and indicates an evaluation to TRUE if all the predicates evaluate to TRUE.
 		for _, predicate := range p.Predicates {
-			eval, err := (*predicate).True(features)
+			eval, err := (*predicate).Evaluate(features)
 			if err != nil {
 				return null.BoolFromPtr(nil), errors.Wrapf(err, "Error when evaluating predicate %s", p)
 			}
@@ -83,7 +83,7 @@ func (p *CompoundPredicate) True(features map[string]interface{}) (null.Bool, er
 	case op.Operators.Or:
 		// The operator or indicates an evaluation to TRUE if one of the predicates evaluates to TRUE.
 		for _, predicate := range p.Predicates {
-			eval, err := (*predicate).True(features)
+			eval, err := (*predicate).Evaluate(features)
 			if err != nil {
 				return null.BoolFromPtr(nil), errors.Wrapf(err, "Error when evaluating predicate %s", p)
 			}
@@ -97,7 +97,7 @@ func (p *CompoundPredicate) True(features map[string]interface{}) (null.Bool, er
 		// The operator xor indicates an evaluation to TRUE if an odd number of the predicates evaluates to TRUE and all others evaluate to FALSE.
 		count := 0
 		for _, predicate := range p.Predicates {
-			eval, err := (*predicate).True(features)
+			eval, err := (*predicate).Evaluate(features)
 			if err != nil {
 				return null.BoolFromPtr(nil), errors.Wrapf(err, "Error when evaluating predicate %s", p)
 			}
@@ -110,7 +110,7 @@ func (p *CompoundPredicate) True(features map[string]interface{}) (null.Bool, er
 		// The operator surrogate allows for specifying surrogate predicates.
 		// They are used for cases where a missing value appears in the evaluation of the parent predicate such that an alternative predicate is available.
 		for _, predicate := range p.Predicates {
-			eval, err := (*predicate).True(features)
+			eval, err := (*predicate).Evaluate(features)
 			if err != nil {
 				return null.BoolFromPtr(nil), errors.Wrapf(err, "Error when evaluating predicate %s", p)
 			}
