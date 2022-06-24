@@ -188,38 +188,3 @@ func TestNodeEquality(t *testing.T) {
 		assert.Equal(t, test.Expected, test.NodeA.EqualTo(*test.NodeB))
 	}
 }
-
-func TestComputeWeightedConfidence(t *testing.T) {
-	xmlStr := []byte(`
-	<Node id="2" score="will play" recordCount="50" defaultChild="3">
-	<SimplePredicate field="outlook" operator="equal" value="sunny"/>
-	<ScoreDistribution value="will play" recordCount="40" confidence="0.8"/>
-	<ScoreDistribution value="may play" recordCount="2" confidence="0.04"/>
-	<ScoreDistribution value="no play" recordCount="8" confidence="0.16"/>
-	<Node id="3" score="will play" recordCount="40">
-	  <CompoundPredicate booleanOperator="surrogate">
-		<SimplePredicate field="temperature" operator="greaterOrEqual" value="50"/>
-		<SimplePredicate field="humidity" operator="lessThan" value="80"/>
-	  </CompoundPredicate>
-	  <ScoreDistribution value="will play" recordCount="36" confidence="0.9"/>
-	  <ScoreDistribution value="may play" recordCount="2" confidence="0.05"/>
-	  <ScoreDistribution value="no play" recordCount="2" confidence="0.05"/>
-	</Node>
-	<Node id="4" score="no play" recordCount="10">
-	  <CompoundPredicate booleanOperator="surrogate">
-		<SimplePredicate field="temperature" operator="lessThan" value="50"/>
-		<SimplePredicate field="humidity" operator="greaterOrEqual" value="80"/>
-	  </CompoundPredicate>
-	  <ScoreDistribution value="will play" recordCount="4" confidence="0.4"/>
-	  <ScoreDistribution value="may play" recordCount="0" confidence="0.0"/>
-	  <ScoreDistribution value="no play" recordCount="6" confidence="0.6"/>
-	</Node>
-  </Node>
-  `)
-	var nd *node.Node
-	err := xml.Unmarshal(xmlStr, &nd)
-	assert.NoError(t, err)
-	score, err := node.ComputeWeightedConfidence(nd.Children)
-	assert.Equal(t, "will play", score)
-	assert.NoError(t, err)
-}
