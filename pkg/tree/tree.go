@@ -2,8 +2,11 @@ package tree
 
 import (
 	"encoding/xml"
+	"fmt"
+	"strconv"
 
 	"github.com/pkg/errors"
+	"github.com/stillmatic/pummel/pkg/fields"
 	ms "github.com/stillmatic/pummel/pkg/miningschema"
 	"github.com/stillmatic/pummel/pkg/node"
 )
@@ -12,7 +15,6 @@ type TreeModel struct {
 	XMLName              xml.Name         `xml:"TreeModel"`
 	Node                 *node.Node       `xml:"Node"`
 	MiningSchema         *ms.MiningSchema `xml:"MiningSchema"`
-	OutputField          *OutputField     `xml:"OutputField"`
 	ModelName            string           `xml:"modelName,attr"`
 	FunctionName         string           `xml:"functionName,attr"`
 	MissingValueStrategy string           `xml:"missingValueStrategy,attr"`
@@ -20,6 +22,7 @@ type TreeModel struct {
 	NoTrueChildStrategy  string           `xml:"noTrueChildStrategy,attr"`
 	SplitCharacteristic  string           `xml:"splitCharacteristic,attr"`
 	IsScorable           bool             `xml:"isScorable,attr"`
+	Output               *fields.Outputs  `xml:"Output"`
 }
 
 // generate an enum struct for MissingValueStrategy
@@ -53,14 +56,6 @@ var MissingValueStrategy = struct {
 	WeightedConfidence: "weightedConfidence",
 	AggregateNodes:     "aggregateNodes",
 	None:               "none",
-}
-
-type OutputField struct {
-	XMLName     xml.Name `xml:"OutputField"`
-	Name        string   `xml:"name,attr"`
-	DisplayName string   `xml:"displayName,attr"`
-	DataType    string   `xml:"dataType,attr"`
-	Feature     string   `xml:"feature,attr"`
 }
 
 func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interface{}, error) {
@@ -98,21 +93,61 @@ func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interf
 			}
 		}
 	}
-	out := make(map[string]interface{}, 1)
-	out[t.GetOutputField()] = curr.Score
+	var lenOut int
+	if t.Output != nil {
+		lenOut = len((*t.Output).OutputFields)
+	}
+	out := make(map[string]interface{}, lenOut)
+
+	if t.Output != nil {
+		for _, output := range (*t.Output).OutputFields {
+			switch output.Feature {
+			case "predictedValue":
+				out[output.Name] = curr.Score
+			case "probability":
+			}
+			fmt.Println("t.output", output.Name, out[output.Name])
+		}
+	} else {
+		if t.FunctionName == "regression" {
+			parsed, err := strconv.ParseFloat(curr.Score, 64)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to parse score %s", curr.Score)
+			}
+			out[t.GetOutputField()] = parsed
+		} else {
+			out[t.GetOutputField()] = curr.Score
+		}
+	}
+	if curr.ScoreDistributions != nil {
+		var sum float64
+		vals := make(map[string]float64, len(curr.ScoreDistributions))
+		for _, sd := range curr.ScoreDistributions {
+			// if sd.Probability > 0 {
+			// 	vals[sd.Value] = sd.Probability
+			// }
+			vals[sd.Value] = float64(sd.RecordCount)
+			sum += float64(sd.RecordCount)
+		}
+		for i, val := range vals {
+			var nameForField string
+			if t.Output != nil {
+				fieldName, err := t.Output.GetFeature(i)
+				if err != nil {
+					return nil, errors.Wrapf(err, "failed to get feature name for index %q", i)
+				}
+				nameForField = fieldName.Name
+			} else {
+				nameForField = i
+			}
+
+			out[nameForField] = val / sum
+
+		}
+	}
 	return out, nil
 }
 
 func (t *TreeModel) GetOutputField() string {
-	if t.OutputField != nil {
-		return t.OutputField.Name
-	}
-	var out string
-	for _, f := range t.MiningSchema.MiningFields {
-		if f.UsageType == "predicted" {
-			out = f.Name
-			break
-		}
-	}
-	return out
+	return t.MiningSchema.GetOutputField()
 }

@@ -34,6 +34,7 @@ func TestRegressionTable(t *testing.T) {
 	assert.Equal(t, float64(396.47), out)
 }
 
+//nolint
 func BenchmarkRegressionTable(b *testing.B) {
 	var rt regression.RegressionTable
 	xml.Unmarshal(regressionTableXML, &rt)

@@ -36,7 +36,6 @@ type PMMLRegressionModel struct {
 	RegressionModel *regression.RegressionModel `xml:"RegressionModel"`
 }
 
-// TODO: genericize this.
 func (ptm *PMMLTreeModel) Evaluate(features map[string]interface{}) (map[string]interface{}, error) {
 	return ptm.TreeModel.Evaluate(features)
 }

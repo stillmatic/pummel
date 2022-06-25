@@ -12,6 +12,7 @@ docs/public
 .gobin/
 .hermit/
 it*/state
+.vscode/
 
 # Binaries for programs and plugins
 *.exe

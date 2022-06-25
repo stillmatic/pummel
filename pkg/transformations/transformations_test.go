@@ -24,3 +24,21 @@ func TestDerivedFieldFloat(t *testing.T) {
 	assert.Equal(t, float64(10), output)
 
 }
+
+func BenchmarkDerivedFieldFloat(b *testing.B) {
+	derivedFieldFloatXML := []byte(` <DerivedField dataType="double" optype="continuous" name="float(price)">
+	<FieldRef field="price" />
+</DerivedField>`)
+	var df transformations.DerivedField
+	err := xml.Unmarshal(derivedFieldFloatXML, &df)
+	if err != nil {
+		b.Error(err)
+	}
+	input := interface{}("10")
+	for i := 0; i < b.N; i++ {
+		_, err := df.Transform(input)
+		if err != nil {
+			b.Error(err)
+		}
+	}
+}

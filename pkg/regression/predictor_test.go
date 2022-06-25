@@ -16,7 +16,7 @@ func TestNumericPredictor(t *testing.T) {
 	err := xml.Unmarshal(numPredictorXML, &numPredictor)
 	assert.NoError(t, err)
 	assert.Equal(t, "age", numPredictor.Name)
-	assert.Equal(t, int64(1), numPredictor.Exponent)
+	assert.Equal(t, float64(1), numPredictor.Exponent)
 	assert.Equal(t, float64(7.1), numPredictor.Coefficient)
 	inputs := map[string]interface{}{
 		"age":    float64(30),

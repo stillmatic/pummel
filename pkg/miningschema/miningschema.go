@@ -65,3 +65,15 @@ var InvalidValueTreatmentMethods = struct {
 	AsMissing:     "asMissing",
 	AsValue:       "asValue",
 }
+
+func (ms *MiningSchema) GetOutputField() string {
+	var out string
+	for _, f := range (*ms).MiningFields {
+		// 'predicted' is valid but deprecated as of PMML 4.2
+		if f.UsageType == "predicted" || f.UsageType == "target" {
+			out = f.Name
+			break
+		}
+	}
+	return out
+}

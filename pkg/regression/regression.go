@@ -3,17 +3,26 @@ package regression
 import (
 	"encoding/xml"
 	"fmt"
+
+	"github.com/stillmatic/pummel/pkg/fields"
+	"github.com/stillmatic/pummel/pkg/miningschema"
 )
 
 type RegressionModel struct {
-	XMLName          xml.Name           `xml:"RegressionModel"`
-	RegressionTables []*RegressionTable `xml:"RegressionTable"`
-	ModelName        string             `xml:"modelName,attr"`
-	FunctionName     string             `xml:"functionName,attr"`
-	ModelType        string             `xml:"modelType,attr"`
-	TargetFieldName  string             `xml:"targetFieldName,attr"`
+	XMLName          xml.Name                   `xml:"RegressionModel"`
+	RegressionTables []*RegressionTable         `xml:"RegressionTable"`
+	ModelName        string                     `xml:"modelName,attr"`
+	FunctionName     string                     `xml:"functionName,attr"`
+	ModelType        string                     `xml:"modelType,attr"`
+	TargetFieldName  string                     `xml:"targetFieldName,attr"`
+	MiningSchema     *miningschema.MiningSchema `xml:"MiningSchema"`
 	Normalizer       Normalizer
-	IsScorable       bool `xml:"isScorable,attr"`
+	IsScorable       bool            `xml:"isScorable,attr"`
+	Output           *fields.Outputs `xml:"Output>OutputField"`
+}
+
+func (rm *RegressionModel) GetOutputField() string {
+	return rm.MiningSchema.GetOutputField()
 }
 
 func (rm *RegressionModel) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
@@ -49,27 +58,41 @@ func (rm *RegressionModel) UnmarshalXML(d *xml.Decoder, start xml.StartElement) 
 		if err != nil {
 			return err
 		}
-		switch t := t.(type) {
+		switch tt := t.(type) {
 		case xml.StartElement:
-			start := t
-			if start.Name.Local == "RegressionTable" {
+			switch tt.Name.Local {
+			case "RegressionTable":
 				var rt RegressionTable
-				err := d.DecodeElement(&rt, &start)
+				err := d.DecodeElement(&rt, &tt)
 				if err != nil {
 					return err
 				}
 				rm.RegressionTables = append(rm.RegressionTables, &rt)
+			case "MiningSchema":
+				var ms miningschema.MiningSchema
+				err := d.DecodeElement(&ms, &tt)
+				if err != nil {
+					return err
+				}
+				rm.MiningSchema = &ms
+			case "Output":
+				var out fields.Outputs
+				err := d.DecodeElement(&out, &tt)
+				if err != nil {
+					return err
+				}
+				rm.Output = &out
+			default:
+				return fmt.Errorf("unknown element: %s", tt.Name.Local)
 			}
+
 		case xml.EndElement:
-			end := t
-			if end.Name.Local == "RegressionModel" {
-				return nil
-			}
+			return nil
 		}
 	}
 }
 
-func (rm RegressionModel) Evaluate(inputs map[string]interface{}) (map[string]interface{}, error) {
+func (rm *RegressionModel) Evaluate(inputs map[string]interface{}) (map[string]interface{}, error) {
 	switch rm.FunctionName {
 	case "regression":
 		// assume only 1 regression table in regression
@@ -77,8 +100,19 @@ func (rm RegressionModel) Evaluate(inputs map[string]interface{}) (map[string]in
 		if err != nil {
 			return nil, err
 		}
+		var targetFieldName string
+		if rm.Output != nil {
+			pv, err := rm.Output.GetPredictedValue()
+			if err != nil {
+				return nil, err
+			}
+			targetFieldName = pv.Name
+		} else {
+			targetFieldName = rm.GetOutputField()
+		}
+
 		out := map[string]interface{}{
-			rm.TargetFieldName: val,
+			targetFieldName: val,
 		}
 		return out, nil
 	case "classification":

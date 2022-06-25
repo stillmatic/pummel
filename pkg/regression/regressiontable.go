@@ -10,14 +10,14 @@ import (
 
 type RegressionTable struct {
 	XMLName        xml.Name `xml:"RegressionTable"`
-	Predictors     []*Predictor
+	Predictors     []Predictor
 	Intercept      float64 `xml:"intercept,attr"`
 	TargetCategory string  `xml:"targetCategory,attr"`
 }
 
 func (r *RegressionTable) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	r.XMLName = start.Name
-	r.Predictors = make([]*Predictor, 0)
+	r.Predictors = make([]Predictor, 0)
 	for _, attr := range start.Attr {
 		switch attr.Name.Local {
 		case "intercept":
@@ -49,7 +49,7 @@ func (r *RegressionTable) UnmarshalXML(d *xml.Decoder, start xml.StartElement) e
 				if err = d.DecodeElement(&p, &tt); err != nil {
 					return errors.Wrap(err, "error decoding predictor")
 				}
-				r.Predictors = append(r.Predictors, &p)
+				r.Predictors = append(r.Predictors, p)
 			}
 		case xml.EndElement:
 			return nil
@@ -59,9 +59,10 @@ func (r *RegressionTable) UnmarshalXML(d *xml.Decoder, start xml.StartElement) e
 
 func (r *RegressionTable) Evaluate(inputs map[string]interface{}) (float64, error) {
 	result := r.Intercept
+
 	for _, predictor := range r.Predictors {
 		var value float64
-		value, err := (*predictor).Evaluate(inputs)
+		value, err := predictor.Evaluate(inputs)
 
 		if err != nil {
 			return 0, err

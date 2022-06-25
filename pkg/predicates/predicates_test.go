@@ -292,3 +292,20 @@ func TestCompoundPredicatesMissing(t *testing.T) {
 		assert.Equal(t, res.ValueOrZero(), test.expected)
 	}
 }
+
+//nolint
+func BenchmarkCompoundPredicates(b *testing.B) {
+	var sp predicates.CompoundPredicate
+	err := xml.Unmarshal([]byte(`
+	<CompoundPredicate booleanOperator="and">
+		<SimplePredicate field="f" operator="equal" value="A"/>
+		<SimplePredicate field="f" operator="equal" value="B"/>
+	</CompoundPredicate>
+	`), &sp)
+	if err != nil {
+		b.Fatal("could not unmarshal xml", err)
+	}
+	for i := 0; i < b.N; i++ {
+		sp.Evaluate(map[string]interface{}{"f": "A"})
+	}
+}

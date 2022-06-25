@@ -178,8 +178,9 @@ func TestLinearRegression(t *testing.T) {
 	var prm model.PMMLRegressionModel
 	err := xml.Unmarshal(linearRegressionXML, &prm)
 	assert.Equal(t, 4, len(prm.DataDictionary.DataFields))
-	rm := prm.RegressionModel
 	assert.NoError(t, err)
+	rm := prm.RegressionModel
+	assert.Equal(t, len((*rm.MiningSchema).MiningFields), 4)
 	assert.Equal(t, "Sample for linear regression", rm.ModelName)
 	assert.Equal(t, "regression", rm.FunctionName)
 	assert.Equal(t, float64(132.37), rm.RegressionTables[0].Intercept)
@@ -281,6 +282,7 @@ func TestInteractionTerms(t *testing.T) {
 	assert.InEpsilon(t, float64(-18.455), out["y"], 0.01)
 }
 
+//nolint
 func BenchmarkLinearRegression(b *testing.B) {
 	var prm model.PMMLRegressionModel
 	xml.Unmarshal(logisticRegressionXML, &prm)
@@ -295,6 +297,7 @@ func BenchmarkLinearRegression(b *testing.B) {
 	}
 }
 
+//nolint
 func BenchmarkPolynomialRegression(b *testing.B) {
 	var prm model.PMMLRegressionModel
 	xml.Unmarshal(polynomialRegressionXML, &prm)
@@ -308,6 +311,7 @@ func BenchmarkPolynomialRegression(b *testing.B) {
 	}
 }
 
+//nolint
 func BenchmarkComplexRegression(b *testing.B) {
 	var prm model.PMMLRegressionModel
 	xml.Unmarshal(complexClassificationXML, &prm)

@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/pkg/errors"
+	"github.com/stillmatic/pummel/pkg/fields"
 	"github.com/stillmatic/pummel/pkg/miningschema"
 	"github.com/stillmatic/pummel/pkg/predicates"
+	"github.com/stillmatic/pummel/pkg/regression"
 	"github.com/stillmatic/pummel/pkg/transformations"
 	"github.com/stillmatic/pummel/pkg/tree"
 )
@@ -14,6 +17,7 @@ import (
 type MiningModel struct {
 	XMLName              xml.Name                       `xml:"MiningModel"`
 	MiningSchema         *miningschema.MiningSchema     `xml:"MiningSchema"`
+	Output               *fields.Outputs                `xml:"Output"`
 	Segmentation         Segmentation                   `xml:"Segmentation"`
 	FunctionName         string                         `xml:"functionName,attr"`
 	ModelName            string                         `xml:"modelName,attr"`
@@ -98,6 +102,13 @@ func (s *Segment) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 					return err
 				}
 				s.ModelElement = &tm
+			case "RegressionModel":
+				var rm regression.RegressionModel
+				err = d.DecodeElement(&rm, &tt)
+				if err != nil {
+					return err
+				}
+				s.ModelElement = &rm
 			default:
 				return fmt.Errorf("unknown children type: %s", tt.Name.Local)
 			}
@@ -121,10 +132,119 @@ func (s *Segment) Evaluate(values map[string]interface{}) (map[string]interface{
 			return nil, nil
 		}
 	}
-	// res, err := s.ModelElement.Evaluate(values)
-	// if err != nil {
-	// 	return nil, errors.Wrapf(err, "failed to evaluate model element")
-	// }
-	return nil, nil
+	res, err := s.ModelElement.Evaluate(values)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to evaluate model element")
+	}
+	return res, nil
+}
 
+// Evaluate aggregates results from each segmentation
+func (sg *Segmentation) Evaluate(values map[string]interface{}) (map[string]interface{}, error) {
+	switch sg.MultipleModelMethod {
+	case MultipleModelMethod.MajorityVote:
+		return sg.EvaluateMajorityVote(values)
+	case MultipleModelMethod.WeightedAverage:
+		return sg.EvaluateWeightedAverage(values)
+	case MultipleModelMethod.SelectFirst:
+		return sg.EvaluateSelectFirst(values)
+	case MultipleModelMethod.ModelChain:
+		return sg.EvaluateModelChain(values)
+	default:
+		return nil, fmt.Errorf("unknown multiple model method: %s", sg.MultipleModelMethod)
+	}
+}
+
+func (mm *MiningModel) Evaluate(values map[string]interface{}) (map[string]interface{}, error) {
+	res, err := mm.Segmentation.Evaluate(values)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to evaluate segmentation")
+	}
+	for i, v := range res {
+		outputName, err := mm.Output.GetFeature(i)
+		if err != nil {
+			continue
+		}
+		switch outputName.OpType {
+		case "continuous":
+			res[outputName.Name] = v.(float64)
+		case "categorical":
+			res[outputName.Name] = v.(string)
+		}
+	}
+	return res, nil
+}
+
+func (sg *Segmentation) EvaluateModelChain(values map[string]interface{}) (map[string]interface{}, error) {
+	out := values
+	for i, s := range sg.Segments {
+		res, err := s.Evaluate(out)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to evaluate segment")
+		}
+		fmt.Println(i, res)
+		for k, v := range res {
+			out[k] = v
+		}
+	}
+	return out, nil
+}
+
+func (sg *Segmentation) EvaluateSelectFirst(values map[string]interface{}) (map[string]interface{}, error) {
+	for _, s := range sg.Segments {
+		res, err := s.Evaluate(values)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to evaluate segment")
+		}
+		if res != nil {
+			return res, nil
+		}
+	}
+	return nil, nil
+}
+
+func (sg *Segmentation) EvaluateMajorityVote(values map[string]interface{}) (map[string]interface{}, error) {
+	outputName := sg.Segments[0].ModelElement.GetOutputField()
+	var topCount float64
+	var topCategory string
+	out := make(map[string]interface{})
+	count := make(map[string]float64)
+	for _, s := range sg.Segments {
+		res, err := s.Evaluate(values)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to evaluate segment")
+		}
+		for k, v := range res {
+			if k == outputName {
+				newCount := count[v.(string)] + 1.0
+				if newCount > topCount {
+					topCount = newCount
+					topCategory = v.(string)
+				}
+				count[v.(string)] = newCount
+			}
+		}
+	}
+
+	for k, v := range count {
+		out[k] = v
+	}
+	out[outputName] = topCategory
+	return out, nil
+}
+
+func (sg *Segmentation) EvaluateWeightedAverage(values map[string]interface{}) (map[string]interface{}, error) {
+	outputName := sg.Segments[0].ModelElement.GetOutputField()
+
+	var totalValue float64
+	for _, s := range sg.Segments {
+		res, err := s.Evaluate(values)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to evaluate segment")
+		}
+		ret := res[outputName].(float64) * s.Weight
+		totalValue += ret
+	}
+	out := map[string]interface{}{outputName: totalValue}
+	return out, nil
 }

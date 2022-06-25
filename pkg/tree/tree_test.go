@@ -70,11 +70,11 @@ func TestParseTree(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "golfing", tm.ModelName)
 	assert.Equal(t, "classification", tm.FunctionName)
-	assert.Equal(t, "temperature", tm.MiningSchema.MiningFields[0].Name)
-	assert.Equal(t, "humidity", tm.MiningSchema.MiningFields[1].Name)
-	assert.Equal(t, "windy", tm.MiningSchema.MiningFields[2].Name)
-	assert.Equal(t, "outlook", tm.MiningSchema.MiningFields[3].Name)
-	assert.Equal(t, "whatIdo", tm.MiningSchema.MiningFields[4].Name)
+	assert.Equal(t, "temperature", (*tm.MiningSchema).MiningFields[0].Name)
+	assert.Equal(t, "humidity", (*tm.MiningSchema).MiningFields[1].Name)
+	assert.Equal(t, "windy", (*tm.MiningSchema).MiningFields[2].Name)
+	assert.Equal(t, "outlook", (*tm.MiningSchema).MiningFields[3].Name)
+	assert.Equal(t, "whatIdo", (*tm.MiningSchema).MiningFields[4].Name)
 	assert.Equal(t, "whatIdo", tm.GetOutputField())
 
 	inputData := map[string]interface{}{
@@ -85,6 +85,75 @@ func TestParseTree(t *testing.T) {
 	}
 
 	res, err := tm.Evaluate(inputData)
+	t.Log(res)
 	assert.NoError(t, err)
-	assert.Equal(t, "may play", res["whatIdo"])
+	assert.Equal(t, "may play", res[tm.GetOutputField()])
+}
+
+var complexTreeXML = []byte(`
+<TreeModel modelName="Iris" functionName="classification" splitCharacteristic="binarySplit">
+<MiningSchema>
+  <MiningField name="petal_length" usageType="active"/>
+  <MiningField name="petal_width" usageType="active"/>
+  <MiningField name="Class" usageType="target"/>
+</MiningSchema>
+<Output>
+  <OutputField dataType="string" feature="predictedValue" name="PredictedClass" optype="categorical"/>
+  <OutputField dataType="double" feature="probability" name="Probability_setosa" optype="continuous" value="Iris-setosa"/>
+  <OutputField dataType="double" feature="probability" name="Probability_versicolor" optype="continuous" value="Iris-versicolor"/>
+  <OutputField dataType="double" feature="probability" name="Probability_virginica" optype="continuous" value="Iris-virginica"/>
+</Output>
+<Node score="Iris-setosa" recordCount="150">
+  <True/>
+  <ScoreDistribution value="Iris-setosa" recordCount="50"/>
+  <ScoreDistribution value="Iris-versicolor" recordCount="50"/>
+  <ScoreDistribution value="Iris-virginica" recordCount="50"/>
+  <Node score="Iris-setosa" recordCount="50">
+	<SimplePredicate field="petal_length" operator="lessThan" value="2.45"/>
+	<ScoreDistribution value="Iris-setosa" recordCount="50"/>
+	<ScoreDistribution value="Iris-versicolor" recordCount="0"/>
+	<ScoreDistribution value="Iris-virginica" recordCount="0"/>
+  </Node>
+  <Node score="Iris-versicolor" recordCount="100">
+	<SimplePredicate field="petal_length" operator="greaterThan" value="2.45"/>
+	<ScoreDistribution value="Iris-setosa" recordCount="0"/>
+	<ScoreDistribution value="Iris-versicolor" recordCount="50"/>
+	<ScoreDistribution value="Iris-virginica" recordCount="50"/>
+	<Node score="Iris-versicolor" recordCount="54">
+	  <SimplePredicate field="petal_width" operator="lessThan" value="1.75"/>
+	  <ScoreDistribution value="Iris-setosa" recordCount="0"/>
+	  <ScoreDistribution value="Iris-versicolor" recordCount="49"/>
+	  <ScoreDistribution value="Iris-virginica" recordCount="5"/>
+	</Node>
+	<Node score="Iris-virginica" recordCount="46">
+	  <SimplePredicate field="petal_width" operator="greaterThan" value="1.75"/>
+	  <ScoreDistribution value="Iris-setosa" recordCount="0"/>
+	  <ScoreDistribution value="Iris-versicolor" recordCount="1"/>
+	  <ScoreDistribution value="Iris-virginica" recordCount="45"/>
+	</Node>
+  </Node>
+</Node>
+</TreeModel>
+`)
+
+func TestComplexTreeXML(t *testing.T) {
+	var tm *tree.TreeModel
+	err := xml.Unmarshal(complexTreeXML, &tm)
+	assert.NoError(t, err)
+	assert.Equal(t, len(tm.Output.OutputFields), 4)
+
+	assert.Equal(t, "Iris", tm.ModelName)
+	pv, err := tm.Output.GetPredictedValue()
+	assert.NoError(t, err)
+	assert.Equal(t, "PredictedClass", pv.Name)
+	input := map[string]interface{}{
+		"petal_length": 2.5,
+		"petal_width":  1.5,
+		"temperature":  0.5,
+		"cloudiness":   0.5,
+	}
+	res, err := tm.Evaluate(input)
+	assert.NoError(t, err)
+	t.Log(res)
+	assert.Equal(t, "Iris-versicolor", res["PredictedClass"])
 }
