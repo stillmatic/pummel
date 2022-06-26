@@ -2,6 +2,7 @@ package predicates_test
 
 import (
 	"encoding/xml"
+	"fmt"
 	"testing"
 
 	"github.com/stillmatic/pummel/pkg/predicates"
@@ -295,17 +296,38 @@ func TestCompoundPredicatesMissing(t *testing.T) {
 
 //nolint
 func BenchmarkCompoundPredicates(b *testing.B) {
-	var sp predicates.CompoundPredicate
-	err := xml.Unmarshal([]byte(`
-	<CompoundPredicate booleanOperator="and">
-		<SimplePredicate field="f" operator="equal" value="A"/>
-		<SimplePredicate field="f" operator="equal" value="B"/>
-	</CompoundPredicate>
-	`), &sp)
-	if err != nil {
-		b.Fatal("could not unmarshal xml", err)
+	for i, test := range compoundPredicateTests {
+		var sp predicates.CompoundPredicate
+		xml.Unmarshal(test.inputs.bytes, &sp)
+		b.Run(fmt.Sprintf("test_%v", i), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				sp.Evaluate(test.inputs.features)
+			}
+		})
+
 	}
-	for i := 0; i < b.N; i++ {
-		sp.Evaluate(map[string]interface{}{"f": "A"})
+}
+
+func BenchmarkSimpleSetPredicates(b *testing.B) {
+	for i, test := range simpleSetPredicateTests {
+		var sp predicates.SimpleSetPredicate
+		xml.Unmarshal(test.inputs.bytes, &sp)
+		b.Run(fmt.Sprintf("test_%v", i), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				sp.Evaluate(test.inputs.features)
+			}
+		})
+	}
+}
+
+func BenchmarkSimplePredicates(b *testing.B) {
+	for i, test := range simplePredicateTests {
+		var sp predicates.SimplePredicate
+		xml.Unmarshal(test.inputs.bytes, &sp)
+		b.Run(fmt.Sprintf("test_%v", i), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				sp.Evaluate(test.inputs.features)
+			}
+		})
 	}
 }

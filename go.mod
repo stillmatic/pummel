@@ -2,12 +2,9 @@ module github.com/stillmatic/pummel
 
 go 1.18
 
-require (
-	github.com/mattn/go-shellwords v1.0.12
-	github.com/stretchr/testify v1.7.2
-)
+require github.com/stretchr/testify v1.7.2
 
-require golang.org/x/exp v0.0.0-20220613132600-b0d781184e0d // indirect
+require golang.org/x/exp v0.0.0-20220613132600-b0d781184e0d
 
 require (
 	github.com/davecgh/go-spew v1.1.0 // indirect

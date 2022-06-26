@@ -3,9 +3,8 @@ package predicates
 import (
 	"encoding/xml"
 	"fmt"
+	"strings"
 
-	"github.com/mattn/go-shellwords"
-	"github.com/pkg/errors"
 	op "github.com/stillmatic/pummel/pkg/operators"
 	"gopkg.in/guregu/null.v4"
 )
@@ -16,7 +15,38 @@ type SimpleSetPredicate struct {
 	XMLName  xml.Name `xml:"SimpleSetPredicate"`
 	Field    string   `xml:"field,attr"`
 	Operator string   `xml:"booleanOperator,attr"`
-	Values   string   `xml:"Array"`
+	Values   []string `xml:"Array"`
+}
+
+// Custom XML Unmarshal for SimpleSetPredicate
+func (p *SimpleSetPredicate) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	p.XMLName = start.Name
+	p.Values = make([]string, 0)
+	for _, attr := range start.Attr {
+		switch attr.Name.Local {
+		case "field":
+			p.Field = attr.Value
+		case "booleanOperator":
+			p.Operator = attr.Value
+		}
+	}
+	for {
+		t, err := d.Token()
+		if err != nil {
+			return err
+		}
+		switch tt := t.(type) {
+		case xml.StartElement:
+			var v string
+			if err := d.DecodeElement(&v, &tt); err != nil {
+				return err
+			}
+			p.Values = strings.Fields(v)
+		case xml.EndElement:
+			return nil
+		}
+	}
+
 }
 
 func (p *SimpleSetPredicate) String() string {
@@ -24,12 +54,6 @@ func (p *SimpleSetPredicate) String() string {
 }
 
 func (p *SimpleSetPredicate) Evaluate(features map[string]interface{}) (null.Bool, error) {
-	// TODO: move this into the unmarshal step
-	values, err := shellwords.Parse(p.Values)
-	if err != nil {
-		// returns a null bool if we can't parse this predicate
-		return null.BoolFromPtr(nil), errors.Wrapf(err, "failed to parse values for SimpleSetPredicate %s", p.Field)
-	}
 	featureVal, exists := features[p.Field]
 	if !exists {
 		return null.BoolFromPtr(nil), nil
@@ -37,14 +61,14 @@ func (p *SimpleSetPredicate) Evaluate(features map[string]interface{}) (null.Boo
 
 	switch p.Operator {
 	case op.Operators.IsIn:
-		for _, value := range values {
+		for _, value := range p.Values {
 			if value == featureVal {
 				return null.BoolFrom(true), nil
 			}
 		}
 		return null.BoolFrom(false), nil
 	case op.Operators.IsNotIn:
-		for _, value := range values {
+		for _, value := range p.Values {
 			if value == featureVal {
 				return null.BoolFrom(false), nil
 			}
