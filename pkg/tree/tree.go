@@ -68,6 +68,7 @@ func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interf
 	}
 	curr := t.Node
 	for len(curr.Children) > 0 {
+		prevNode := curr
 		for _, child := range curr.Children {
 			predRes, err := child.True(features)
 			if err != nil {
@@ -92,7 +93,15 @@ func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interf
 				break
 			}
 		}
+		// could not find a valid child
+		if curr == prevNode {
+			break
+		}
 	}
+	if curr.Score == "" {
+		return nil, errors.New(fmt.Sprintf("terminal node without score, Node id: %v", curr.ID))
+	}
+
 	var lenOut int
 	if t.Output != nil {
 		lenOut = len((*t.Output).OutputFields)
@@ -106,7 +115,6 @@ func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interf
 				out[output.Name] = curr.Score
 			case "probability":
 			}
-			fmt.Println("t.output", output.Name, out[output.Name])
 		}
 	} else {
 		if t.FunctionName == "regression" {

@@ -255,15 +255,17 @@ var compoundPredicateTestsMissing = []predicateTest{
 }
 
 func TestSimplePredicatesMissing(t *testing.T) {
-	for _, test := range simplePredicateTestsMissing {
-		var sp predicates.SimplePredicate
-		err := xml.Unmarshal(test.inputs.bytes, &sp)
-		if err != nil {
-			t.Fatal("could not unmarshal xml")
-		}
-		res, err := sp.Evaluate(test.inputs.features)
-		assert.NoError(t, err)
-		assert.Equal(t, res.Valid, test.expected)
+	for i, test := range simplePredicateTestsMissing {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			var sp predicates.SimplePredicate
+			err := xml.Unmarshal(test.inputs.bytes, &sp)
+			if err != nil {
+				t.Fatal("could not unmarshal xml")
+			}
+			res, err := sp.Evaluate(test.inputs.features)
+			assert.NoError(t, err)
+			assert.Equal(t, res.Valid, test.expected)
+		})
 	}
 }
 
@@ -280,6 +282,7 @@ func TestSimpleSetPredicatesMissing(t *testing.T) {
 	}
 }
 
+//nolint
 func TestCompoundPredicatesMissing(t *testing.T) {
 	for _, test := range compoundPredicateTestsMissing {
 		var sp predicates.CompoundPredicate
@@ -308,6 +311,7 @@ func BenchmarkCompoundPredicates(b *testing.B) {
 	}
 }
 
+//nolint
 func BenchmarkSimpleSetPredicates(b *testing.B) {
 	for i, test := range simpleSetPredicateTests {
 		var sp predicates.SimpleSetPredicate
@@ -320,6 +324,7 @@ func BenchmarkSimpleSetPredicates(b *testing.B) {
 	}
 }
 
+//nolint
 func BenchmarkSimplePredicates(b *testing.B) {
 	for i, test := range simplePredicateTests {
 		var sp predicates.SimplePredicate

@@ -2,6 +2,9 @@ package tree_test
 
 import (
 	"encoding/xml"
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"testing"
 
 	"github.com/stillmatic/pummel/pkg/tree"
@@ -156,4 +159,96 @@ func TestComplexTreeXML(t *testing.T) {
 	assert.NoError(t, err)
 	t.Log(res)
 	assert.Equal(t, "Iris-versicolor", res["PredictedClass"])
+}
+
+var TreeTests = []struct {
+	features map[string]interface{}
+	score    float64
+	err      error
+}{
+	{map[string]interface{}{},
+		4.3463944950723456e-4,
+		nil,
+	},
+	{
+		map[string]interface{}{"f2": "f2v1"},
+		-1.8361380219689046e-4,
+		nil,
+	},
+	{
+		map[string]interface{}{"f2": "f2v1", "f1": "f1v3"},
+		-6.237581139073701e-4,
+		nil,
+	},
+	{
+		map[string]interface{}{"f2": "f2v1", "f1": "f1v3", "f4": 0.08},
+		0.0021968294712358194,
+		nil,
+	},
+	{
+		map[string]interface{}{"f2": "f2v1", "f1": "f1v3", "f4": 0.09},
+		-9.198573460887271e-4,
+		nil,
+	},
+	{
+		map[string]interface{}{"f2": "f2v1", "f1": "f1v3", "f4": 0.09, "f3": "f3v2"},
+		-0.0021187239505556523,
+		nil,
+	},
+	{
+		map[string]interface{}{"f2": "f2v1", "f1": "f1v3", "f4": 0.09, "f3": "f3v4"},
+		-3.3516227414227926e-4,
+		nil,
+	},
+	{
+		map[string]interface{}{"f2": "f2v1", "f1": "f1v4"},
+		0.0011015286521365208,
+		nil,
+	},
+	{
+		map[string]interface{}{"f2": "f2v4"},
+		0.0022726641744997256,
+		nil,
+	},
+	{
+		map[string]interface{}{"f1": "f1v3", "f2": "f2v1", "f3": "f3v7", "f4": 0.09},
+		-1,
+		errors.New("terminal node without score, Node id: 5"),
+	},
+}
+
+func TestTreeFixture(t *testing.T) {
+	treeXmlIO, err := ioutil.ReadFile("../../testdata/tree.pmml")
+	assert.NoError(t, err)
+	var tm *tree.TreeModel
+	err = xml.Unmarshal(treeXmlIO, &tm)
+	assert.NoError(t, err)
+	assert.Equal(t, "regression", tm.FunctionName)
+	assert.Equal(t, "1", tm.Node.ID)
+	assert.Equal(t, 4, len(tm.MiningSchema.MiningFields))
+	for i, test := range TreeTests {
+		t.Run(fmt.Sprintf("test%d", i), func(t *testing.T) {
+			res, err := tm.Evaluate(test.features)
+			if err != nil {
+				assert.Equal(t, test.err.Error(), err.Error())
+			}
+			if err == nil {
+				assert.Equal(t, test.score, res[tm.GetOutputField()])
+			}
+		})
+	}
+}
+
+//nolint
+func BenchmarkTreeFixture(b *testing.B) {
+	treeXmlIO, _ := ioutil.ReadFile("../../testdata/tree.pmml")
+	var tm *tree.TreeModel
+	xml.Unmarshal(treeXmlIO, &tm)
+	for i, test := range TreeTests {
+		b.Run(fmt.Sprintf("test%d", i), func(b *testing.B) {
+			for n := 0; n < b.N; n++ {
+				tm.Evaluate(test.features)
+			}
+		})
+	}
 }
