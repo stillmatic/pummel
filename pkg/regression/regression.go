@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/stillmatic/pummel/pkg/fields"
 	"github.com/stillmatic/pummel/pkg/miningschema"
 )
@@ -118,15 +119,37 @@ func (rm *RegressionModel) Evaluate(inputs map[string]interface{}) (map[string]i
 	case "classification":
 		// score each category and return the one with the highest score
 		scores := make(map[string]interface{}, len(rm.RegressionTables))
+		var topCategory string
+		var topScore float64
 		for _, rt := range rm.RegressionTables {
 			val, err := rt.Evaluate(inputs)
 			if err != nil {
 				return nil, err
 			}
-			scores[rt.TargetCategory] = val
+			if val > topScore {
+				topScore = val
+				topCategory = rt.TargetCategory
+			}
+			// check if we have a output field for this value
+			if rm.Output != nil {
+				tc, err := rm.Output.GetFeature(rt.TargetCategory)
+				if err != nil {
+					scores[rt.TargetCategory] = val
+				}
+				scores[tc.Name] = val
+			} else {
+				scores[rt.TargetCategory] = val
+			}
 		}
 		if rm.Normalizer != nil {
 			scores = rm.Normalizer.Normalize(scores)
+		}
+		if rm.Output != nil {
+			gpv, err := rm.Output.GetPredictedValue()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get predicted value field")
+			}
+			scores[gpv.Name] = topCategory
 		}
 		return scores, nil
 	default:

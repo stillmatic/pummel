@@ -2,6 +2,7 @@ package regression
 
 import (
 	"encoding/xml"
+	"fmt"
 	"math"
 )
 
@@ -35,7 +36,7 @@ type FieldRef struct {
 	Field   string   `xml:"field,attr"`
 }
 
-func (cp CategoricalPredictor) Evaluate(inputs map[string]interface{}) (float64, error) {
+func (cp *CategoricalPredictor) Evaluate(inputs map[string]interface{}) (float64, error) {
 	if value, ok := inputs[cp.Name]; ok {
 		if value == cp.Value {
 			return cp.Coefficient, nil
@@ -45,15 +46,22 @@ func (cp CategoricalPredictor) Evaluate(inputs map[string]interface{}) (float64,
 	return 0, nil
 }
 
-func (np NumericPredictor) Evaluate(inputs map[string]interface{}) (float64, error) {
+func (np *NumericPredictor) Evaluate(inputs map[string]interface{}) (float64, error) {
 	if value, ok := inputs[np.Name]; ok {
-		return np.Coefficient * math.Pow(value.(float64), np.Exponent), nil
+		switch value := value.(type) {
+		case float64:
+			return np.Coefficient * math.Pow(value, np.Exponent), nil
+		case int:
+			return np.Coefficient * math.Pow(float64(value), np.Exponent), nil
+		default:
+			return 0, fmt.Errorf("unsupported type for %s: %T", np.Name, value)
+		}
 	}
 	// if the input value is missing, the result evaluates to a missing value.
 	return 0, nil
 }
 
-func (pt PredictorTerm) Evaluate(inputs map[string]interface{}) (float64, error) {
+func (pt *PredictorTerm) Evaluate(inputs map[string]interface{}) (float64, error) {
 	result := pt.Coefficient
 	for _, fieldRef := range pt.FieldRefs {
 		if value, ok := inputs[fieldRef.Field]; ok {

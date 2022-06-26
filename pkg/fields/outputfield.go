@@ -20,6 +20,9 @@ type OutputField struct {
 }
 
 func (o *Outputs) GetFeature(value string) (*OutputField, error) {
+	if (*o).OutputFields == nil {
+		return nil, fmt.Errorf("no output fields")
+	}
 	for _, output := range (*o).OutputFields {
 		if output.Value == value {
 			return output, nil

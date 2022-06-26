@@ -108,24 +108,14 @@ func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interf
 	}
 	out := make(map[string]interface{}, lenOut)
 
-	if t.Output != nil {
-		for _, output := range (*t.Output).OutputFields {
-			switch output.Feature {
-			case "predictedValue":
-				out[output.Name] = curr.Score
-			case "probability":
-			}
+	if t.FunctionName == "regression" {
+		parsed, err := strconv.ParseFloat(curr.Score, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse score %s", curr.Score)
 		}
+		out[t.GetOutputField()] = parsed
 	} else {
-		if t.FunctionName == "regression" {
-			parsed, err := strconv.ParseFloat(curr.Score, 64)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to parse score %s", curr.Score)
-			}
-			out[t.GetOutputField()] = parsed
-		} else {
-			out[t.GetOutputField()] = curr.Score
-		}
+		out[t.GetOutputField()] = curr.Score
 	}
 	if curr.ScoreDistributions != nil {
 		var sum float64
@@ -148,9 +138,17 @@ func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interf
 			} else {
 				nameForField = i
 			}
-
 			out[nameForField] = val / sum
+		}
+	}
 
+	if t.Output != nil {
+		for _, output := range (*t.Output).OutputFields {
+			switch output.Feature {
+			case "predictedValue":
+				out[output.Name] = curr.Score
+			case "probability":
+			}
 		}
 	}
 	return out, nil

@@ -2,6 +2,8 @@ package regression_test
 
 import (
 	"encoding/xml"
+	"fmt"
+	"io/ioutil"
 	"testing"
 
 	"github.com/stillmatic/pummel/pkg/model"
@@ -325,5 +327,68 @@ func BenchmarkComplexRegression(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		rm.Evaluate(inputData)
+	}
+}
+
+var LRTestCases = []struct {
+	features map[string]interface{}
+	category string
+	err      error
+}{
+	{
+		map[string]interface{}{
+			"x0": 0.1,
+			"x1": 0.1,
+			"x2": 0.1,
+			"x3": 0.1,
+		},
+		"CATEGORY_3",
+		nil,
+	},
+	{
+		map[string]interface{}{},
+		"CATEGORY_3",
+		nil,
+	},
+	{
+		map[string]interface{}{
+			"x0": 0.1,
+			"x1": 0.1,
+			"x2": 100,
+			"x3": 0.1,
+		},
+		"CATEGORY_2",
+		nil,
+	},
+}
+
+func TestLRFixture(t *testing.T) {
+	lrmlIO, err := ioutil.ReadFile("../../testdata/lr.pmml")
+	assert.NoError(t, err)
+	var rm model.PMMLRegressionModel
+	err = xml.Unmarshal(lrmlIO, &rm)
+	assert.NoError(t, err)
+	for i, tc := range LRTestCases {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			res, err := rm.RegressionModel.Evaluate(tc.features)
+			assert.NoError(t, err)
+			gpv, err := rm.RegressionModel.Output.GetPredictedValue()
+			assert.NoError(t, err)
+			assert.Equal(t, tc.category, res[gpv.Name].(string))
+		})
+	}
+}
+
+//nolint
+func BenchmarkLRFixture(b *testing.B) {
+	lrmlIO, _ := ioutil.ReadFile("../../testdata/lr.pmml")
+	var rm model.PMMLRegressionModel
+	xml.Unmarshal(lrmlIO, &rm)
+	for i, tc := range LRTestCases {
+		b.Run(fmt.Sprintf("%d", i), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				rm.RegressionModel.Evaluate(tc.features)
+			}
+		})
 	}
 }

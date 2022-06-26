@@ -36,6 +36,11 @@ type PMMLRegressionModel struct {
 	RegressionModel *regression.RegressionModel `xml:"RegressionModel"`
 }
 
+type PMMLMiningModel struct {
+	PMMLModel
+	MiningModel *MiningModel `xml:"MiningModel"`
+}
+
 func (ptm *PMMLTreeModel) Evaluate(features map[string]interface{}) (map[string]interface{}, error) {
 	return ptm.TreeModel.Evaluate(features)
 }

@@ -3,8 +3,8 @@ package predicates
 import (
 	"encoding/xml"
 	"fmt"
-	"strings"
 
+	"github.com/mattn/go-shellwords"
 	op "github.com/stillmatic/pummel/pkg/operators"
 	"gopkg.in/guregu/null.v4"
 )
@@ -41,7 +41,12 @@ func (p *SimpleSetPredicate) UnmarshalXML(d *xml.Decoder, start xml.StartElement
 			if err := d.DecodeElement(&v, &tt); err != nil {
 				return err
 			}
-			p.Values = strings.Fields(v)
+			// TODO: see if this is really necessary...
+			res, err := shellwords.Parse(v)
+			if err != nil {
+				return err
+			}
+			p.Values = res
 		case xml.EndElement:
 			return nil
 		}

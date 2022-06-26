@@ -2,6 +2,8 @@ package model_test
 
 import (
 	"encoding/xml"
+	"errors"
+	"io/ioutil"
 	"testing"
 
 	"github.com/stillmatic/pummel/pkg/model"
@@ -227,10 +229,10 @@ func TestClassificationEnsembleModel(t *testing.T) {
 	// check classification ensemble model
 	res, err = model.Evaluate(actualInput)
 	assert.NoError(t, err)
-	t.Log("model", res)
+	// t.Log("model", res)
 	assert.Equal(t, res["Class"], "Iris-versicolor")
-	assert.Equal(t, res["ProbVeriscolor"], 2.0)
-	assert.Equal(t, res["ProbSetosa"], 1.0)
+	assert.Equal(t, res["ProbVeriscolor"], (2.0 / 3.0))
+	assert.Equal(t, res["ProbSetosa"], (1.0 / 3.0))
 }
 
 //nolint
@@ -757,4 +759,77 @@ func TestModelChain(t *testing.T) {
 	res, err := model.Segmentation.Evaluate(input)
 	assert.InEpsilon(t, 0.9785185185185183, res["Pollen Index"], 0.01)
 	assert.NoError(t, err)
+}
+
+var RFFixtureCases = []struct {
+	name          string
+	features      map[string]interface{}
+	expectedScore float64
+	expectedErr   error
+}{
+	{
+		"low",
+		map[string]interface{}{
+			"Sex":      "male",
+			"Parch":    0,
+			"Age":      30,
+			"Fare":     9.6875,
+			"Pclass":   2,
+			"SibSp":    0,
+			"Embarked": "Q"},
+		(2.0 / 15.0),
+		nil,
+	},
+	{
+		"high",
+		map[string]interface{}{
+			"Sex":      "female",
+			"Parch":    0,
+			"Age":      38,
+			"Fare":     71.2833,
+			"Pclass":   2,
+			"SibSp":    1,
+			"Embarked": "C",
+		},
+		(14.0 / 15.0),
+		nil,
+	}, {
+		"error",
+		map[string]interface{}{
+			"Sex":      "female",
+			"Parch":    0,
+			"Age":      38,
+			"Fare":     71.2833,
+			"Pclass":   2,
+			"SibSp":    1,
+			"Embarked": "UnknownCategory",
+		},
+		0.0,
+		errors.New("failed to evaluate segmentation: failed to evaluate segment: failed to evaluate model element: terminal node without score, Node id: 1"),
+	},
+}
+
+func TestRFFixture(t *testing.T) {
+	rfXMLIO, err := ioutil.ReadFile("../../testdata/rf.pmml")
+	assert.NoError(t, err)
+	var mm model.PMMLMiningModel
+	err = xml.Unmarshal(rfXMLIO, &mm)
+	assert.NoError(t, err)
+	assert.Equal(t, len(mm.DataDictionary.DataFields), 12)
+	assert.Equal(t, len(mm.MiningModel.MiningSchema.MiningFields), 12)
+	assert.Equal(t, len(mm.MiningModel.Output.OutputFields), 3)
+	assert.Equal(t, len(mm.MiningModel.Segmentation.Segments), 15)
+
+	for _, tc := range RFFixtureCases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := mm.MiningModel.Evaluate(tc.features)
+			if tc.expectedErr != nil {
+				assert.Equal(t, tc.expectedErr.Error(), err.Error())
+			}
+			if err == nil {
+				assert.InEpsilon(t, tc.expectedScore, res["Probability_1"].(float64), 0.01)
+			}
+		})
+	}
+
 }

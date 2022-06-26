@@ -156,6 +156,7 @@ func (sg *Segmentation) Evaluate(values map[string]interface{}) (map[string]inte
 }
 
 func (mm *MiningModel) Evaluate(values map[string]interface{}) (map[string]interface{}, error) {
+	var sum float64
 	res, err := mm.Segmentation.Evaluate(values)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to evaluate segmentation")
@@ -168,8 +169,18 @@ func (mm *MiningModel) Evaluate(values map[string]interface{}) (map[string]inter
 		switch outputName.OpType {
 		case "continuous":
 			res[outputName.Name] = v.(float64)
+			sum += v.(float64)
 		case "categorical":
 			res[outputName.Name] = v.(string)
+		}
+	}
+	for _, v := range mm.Output.OutputFields {
+		if v.Feature == "probability" {
+			val, ok := res[v.Name]
+			if !ok {
+				val = 0.0
+			}
+			res[v.Name] = val.(float64) / sum
 		}
 	}
 	return res, nil
@@ -177,12 +188,11 @@ func (mm *MiningModel) Evaluate(values map[string]interface{}) (map[string]inter
 
 func (sg *Segmentation) EvaluateModelChain(values map[string]interface{}) (map[string]interface{}, error) {
 	out := values
-	for i, s := range sg.Segments {
+	for _, s := range sg.Segments {
 		res, err := s.Evaluate(out)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to evaluate segment")
 		}
-		fmt.Println(i, res)
 		for k, v := range res {
 			out[k] = v
 		}
@@ -209,8 +219,9 @@ func (sg *Segmentation) EvaluateMajorityVote(values map[string]interface{}) (map
 	var topCategory string
 	out := make(map[string]interface{})
 	count := make(map[string]float64)
-	for _, s := range sg.Segments {
+	for i, s := range sg.Segments {
 		res, err := s.Evaluate(values)
+		fmt.Println("segment", i, "result", res)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to evaluate segment")
 		}
@@ -229,6 +240,8 @@ func (sg *Segmentation) EvaluateMajorityVote(values map[string]interface{}) (map
 	for k, v := range count {
 		out[k] = v
 	}
+	fmt.Println("majority vote result", out)
+
 	out[outputName] = topCategory
 	return out, nil
 }
