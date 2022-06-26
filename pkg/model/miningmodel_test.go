@@ -793,7 +793,8 @@ var RFFixtureCases = []struct {
 		},
 		(14.0 / 15.0),
 		nil,
-	}, {
+	},
+	{
 		"error",
 		map[string]interface{}{
 			"Sex":      "female",
@@ -831,5 +832,92 @@ func TestRFFixture(t *testing.T) {
 			}
 		})
 	}
+}
 
+var GBMFixtureCases = []struct {
+	name          string
+	features      map[string]interface{}
+	expectedScore float64
+	expectedErr   error
+}{
+	{
+		"low",
+		map[string]interface{}{
+			"Sex":      "male",
+			"Parch":    0,
+			"Age":      30,
+			"Fare":     9.6875,
+			"Pclass":   2,
+			"SibSp":    0,
+			"Embarked": "Q"},
+		0.3652639329522468,
+		nil,
+	},
+	{
+		"high",
+		map[string]interface{}{
+			"Sex":      "female",
+			"Parch":    0,
+			"Age":      38,
+			"Fare":     71.2833,
+			"Pclass":   2,
+			"SibSp":    1,
+			"Embarked": "C",
+		},
+		0.4178155014037758,
+		nil,
+	},
+}
+
+func TestGBMFixture(t *testing.T) {
+	gbmXMLIO, err := ioutil.ReadFile("../../testdata/gbm.pmml")
+	assert.NoError(t, err)
+	var mm model.PMMLMiningModel
+	err = xml.Unmarshal(gbmXMLIO, &mm)
+	assert.NoError(t, err)
+	assert.Equal(t, len(mm.DataDictionary.DataFields), 2)
+	assert.Equal(t, len(mm.MiningModel.MiningSchema.MiningFields), 2)
+	assert.Equal(t, len(mm.MiningModel.Segmentation.Segments), 2)
+
+	for _, tc := range GBMFixtureCases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := mm.MiningModel.Evaluate(tc.features)
+			if tc.expectedErr != nil {
+				assert.Equal(t, tc.expectedErr.Error(), err.Error())
+			}
+			if err == nil {
+				assert.InEpsilon(t, tc.expectedScore, res["Probability_1"].(float64), 0.01)
+			}
+		})
+	}
+}
+
+//nolint
+func BenchmarkGBMFixture(b *testing.B) {
+	gbmXMLIO, _ := ioutil.ReadFile("../../testdata/gbm.pmml")
+	var mm model.PMMLMiningModel
+	xml.Unmarshal(gbmXMLIO, &mm)
+
+	for _, tc := range GBMFixtureCases {
+		b.Run(tc.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				mm.MiningModel.Evaluate(tc.features)
+			}
+		})
+	}
+}
+
+//nolint
+func BenchmarkRFFixture(b *testing.B) {
+	rfXMLIO, _ := ioutil.ReadFile("../../testdata/rf.pmml")
+	var mm model.PMMLMiningModel
+	xml.Unmarshal(rfXMLIO, &mm)
+
+	for _, tc := range RFFixtureCases {
+		b.Run(tc.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				mm.MiningModel.Evaluate(tc.features)
+			}
+		})
+	}
 }

@@ -96,63 +96,71 @@ func (rm *RegressionModel) UnmarshalXML(d *xml.Decoder, start xml.StartElement) 
 func (rm *RegressionModel) Evaluate(inputs map[string]interface{}) (map[string]interface{}, error) {
 	switch rm.FunctionName {
 	case "regression":
-		// assume only 1 regression table in regression
-		val, err := rm.RegressionTables[0].Evaluate(inputs)
-		if err != nil {
-			return nil, err
-		}
-		var targetFieldName string
-		if rm.Output != nil {
-			pv, err := rm.Output.GetPredictedValue()
-			if err != nil {
-				return nil, err
-			}
-			targetFieldName = pv.Name
-		} else {
-			targetFieldName = rm.GetOutputField()
-		}
-
-		out := map[string]interface{}{
-			targetFieldName: val,
-		}
-		return out, nil
+		return rm.EvaluateRegression(inputs)
 	case "classification":
-		// score each category and return the one with the highest score
-		scores := make(map[string]interface{}, len(rm.RegressionTables))
-		var topCategory string
-		var topScore float64
-		for _, rt := range rm.RegressionTables {
-			val, err := rt.Evaluate(inputs)
-			if err != nil {
-				return nil, err
-			}
-			if val > topScore {
-				topScore = val
-				topCategory = rt.TargetCategory
-			}
-			// check if we have a output field for this value
-			if rm.Output != nil {
-				tc, err := rm.Output.GetFeature(rt.TargetCategory)
-				if err != nil {
-					scores[rt.TargetCategory] = val
-				}
-				scores[tc.Name] = val
-			} else {
-				scores[rt.TargetCategory] = val
-			}
-		}
-		if rm.Normalizer != nil {
-			scores = rm.Normalizer.Normalize(scores)
-		}
-		if rm.Output != nil {
-			gpv, err := rm.Output.GetPredictedValue()
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to get predicted value field")
-			}
-			scores[gpv.Name] = topCategory
-		}
-		return scores, nil
+		return rm.EvaluateClassification(inputs)
 	default:
 		return nil, fmt.Errorf("unknown model type: %s", rm.FunctionName)
 	}
+}
+
+func (rm *RegressionModel) EvaluateRegression(inputs map[string]interface{}) (map[string]interface{}, error) {
+	// assume only 1 regression table in regression
+	val, err := rm.RegressionTables[0].Evaluate(inputs)
+	if err != nil {
+		return nil, err
+	}
+	var targetFieldName string
+	if rm.Output != nil {
+		pv, err := rm.Output.GetPredictedValue()
+		if err != nil {
+			return nil, err
+		}
+		targetFieldName = pv.Name
+	} else {
+		targetFieldName = rm.GetOutputField()
+	}
+
+	out := map[string]interface{}{
+		targetFieldName: val,
+	}
+	return out, nil
+}
+
+func (rm *RegressionModel) EvaluateClassification(inputs map[string]interface{}) (map[string]interface{}, error) {
+	// score each category and return the one with the highest score
+	scores := make(map[string]interface{}, len(rm.RegressionTables))
+	var topCategory string
+	var topScore float64
+	for _, rt := range rm.RegressionTables {
+		val, err := rt.Evaluate(inputs)
+		if err != nil {
+			return nil, err
+		}
+		if val > topScore {
+			topScore = val
+			topCategory = rt.TargetCategory
+		}
+		// check if we have a output field for this value
+		if rm.Output != nil {
+			tc, err := rm.Output.GetFeature(rt.TargetCategory)
+			if err != nil {
+				scores[rt.TargetCategory] = val
+			}
+			scores[tc.Name] = val
+		} else {
+			scores[rt.TargetCategory] = val
+		}
+	}
+	if rm.Normalizer != nil {
+		scores = rm.Normalizer.Normalize(scores)
+	}
+	if rm.Output != nil {
+		gpv, err := rm.Output.GetPredictedValue()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get predicted value field")
+		}
+		scores[gpv.Name] = topCategory
+	}
+	return scores, nil
 }

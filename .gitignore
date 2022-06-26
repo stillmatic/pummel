@@ -32,3 +32,5 @@ it*/state
 
 # Go workspace file
 go.work
+
+*.prof

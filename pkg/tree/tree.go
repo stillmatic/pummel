@@ -66,56 +66,29 @@ func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interf
 	if !rootPredRes.Valid {
 		return nil, nil
 	}
-	curr := t.Node
-	for len(curr.Children) > 0 {
-		prevNode := curr
-		for _, child := range curr.Children {
-			predRes, err := child.True(features)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to evaluate child %s", child)
-			}
-			// handle missing value cases
-			if !predRes.Valid {
-				switch t.MissingValueStrategy {
-				case MissingValueStrategy.LastPrediction:
-					break
-				case MissingValueStrategy.NullPrediction:
-					return nil, nil
-				case MissingValueStrategy.DefaultChild:
-					curr, err = curr.GetDefaultChild()
-					if err != nil {
-						return nil, err
-					}
-				}
-			}
-			if predRes.Valid && predRes.Bool {
-				curr = &child
-				break
-			}
-		}
-		// could not find a valid child
-		if curr == prevNode {
-			break
-		}
+	curr, err := t.traverse(features)
+	if err != nil {
+		return nil, err
 	}
+
 	if curr.Score == "" {
-		return nil, errors.New(fmt.Sprintf("terminal node without score, Node id: %v", curr.ID))
+		return nil, fmt.Errorf("terminal node without score, Node id: %v", curr.ID)
 	}
 
-	var lenOut int
-	if t.Output != nil {
-		lenOut = len((*t.Output).OutputFields)
-	}
-	out := make(map[string]interface{}, lenOut)
-
+	// var lenOut int
+	// if t.Output != nil {
+	// 	lenOut = len((*t.Output).OutputFields)
+	// }
+	out := make(map[string]interface{}, 0)
+	outputField := t.GetOutputField()
 	if t.FunctionName == "regression" {
 		parsed, err := strconv.ParseFloat(curr.Score, 64)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse score %s", curr.Score)
 		}
-		out[t.GetOutputField()] = parsed
+		out[outputField] = parsed
 	} else {
-		out[t.GetOutputField()] = curr.Score
+		out[outputField] = curr.Score
 	}
 	if curr.ScoreDistributions != nil {
 		var sum float64
@@ -152,6 +125,42 @@ func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interf
 		}
 	}
 	return out, nil
+}
+
+func (t *TreeModel) traverse(features map[string]interface{}) (*node.Node, error) {
+	curr := t.Node
+	for len(curr.Children) > 0 {
+		prevNode := curr
+		for _, child := range curr.Children {
+			predRes, err := child.True(features)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to evaluate child %s", child)
+			}
+			// handle missing value cases
+			if !predRes.Valid {
+				switch t.MissingValueStrategy {
+				case MissingValueStrategy.LastPrediction:
+					break
+				case MissingValueStrategy.NullPrediction:
+					return nil, nil
+				case MissingValueStrategy.DefaultChild:
+					curr, err = curr.GetDefaultChild()
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+			if predRes.Valid && predRes.Bool {
+				curr = &child
+				break
+			}
+		}
+		// could not find a valid child
+		if curr == prevNode {
+			break
+		}
+	}
+	return curr, nil
 }
 
 func (t *TreeModel) GetOutputField() string {
