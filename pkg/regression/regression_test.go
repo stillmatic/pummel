@@ -372,9 +372,8 @@ func TestLRFixture(t *testing.T) {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			res, err := rm.RegressionModel.Evaluate(tc.features)
 			assert.NoError(t, err)
-			gpv, err := rm.RegressionModel.Output.GetPredictedValue()
-			assert.NoError(t, err)
-			assert.Equal(t, tc.category, res[gpv.Name].(string))
+			gpv := rm.RegressionModel.GetOutputField()
+			assert.Equal(t, tc.category, res[gpv].(string))
 		})
 	}
 }

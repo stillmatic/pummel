@@ -80,5 +80,5 @@ func (p *SimpleSetPredicate) Evaluate(features map[string]interface{}) (null.Boo
 		}
 		return null.BoolFrom(true), nil
 	}
-	return null.BoolFromPtr(nil), fmt.Errorf("unsupported operator: %s", p.Operator)
+	return null.BoolFromPtr(nil), fmt.Errorf("unsupported simple set predicate operator: %s", p.Operator)
 }

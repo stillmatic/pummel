@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/xml"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/stillmatic/pummel/pkg/fields"
@@ -10,16 +11,16 @@ import (
 )
 
 type MiningModel struct {
-	XMLName              xml.Name                       `xml:"MiningModel"`
-	MiningSchema         *miningschema.MiningSchema     `xml:"MiningSchema"`
-	Output               *fields.Outputs                `xml:"Output"`
-	Segmentation         Segmentation                   `xml:"Segmentation"`
-	FunctionName         string                         `xml:"functionName,attr"`
-	ModelName            string                         `xml:"modelName,attr"`
-	AlgorithmName        string                         `xml:"algorithmName,attr"`
-	LocalTransformations []transformations.DerivedField `xml:"LocalTransformations"`
-	IsScorable           bool                           `xml:"isScorable,attr"`
-	Targets              []Target                       `xml:"Targets>Target"`
+	XMLName              xml.Name                              `xml:"MiningModel"`
+	MiningSchema         *miningschema.MiningSchema            `xml:"MiningSchema"`
+	Output               *fields.Outputs                       `xml:"Output"`
+	Segmentation         Segmentation                          `xml:"Segmentation"`
+	FunctionName         string                                `xml:"functionName,attr"`
+	ModelName            string                                `xml:"modelName,attr"`
+	AlgorithmName        string                                `xml:"algorithmName,attr"`
+	LocalTransformations *transformations.LocalTransformations `xml:"LocalTransformations"`
+	IsScorable           bool                                  `xml:"isScorable,attr"`
+	Targets              []Target                              `xml:"Targets>Target"`
 }
 
 type Target struct {
@@ -60,33 +61,39 @@ func (mm *MiningModel) Evaluate(values map[string]interface{}) (map[string]inter
 	switch mm.Segmentation.MultipleModelMethod {
 	case MultipleModelMethod.Sum:
 		res, err = mm.Segmentation.EvaluateSum(values, mm.Targets)
-	case MultipleModelMethod.SelectFirst, MultipleModelMethod.ModelChain, MultipleModelMethod.MajorityVote:
+	case MultipleModelMethod.SelectFirst, MultipleModelMethod.ModelChain,
+		MultipleModelMethod.MajorityVote, MultipleModelMethod.Average:
 		res, err = mm.Segmentation.Evaluate(values)
-
+	default:
+		return nil, fmt.Errorf("unsupported multiple model method %v", mm.Segmentation.MultipleModelMethod)
 	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to evaluate segmentation")
 	}
-	for i, v := range res {
-		outputName, err := mm.Output.GetFeature(i)
-		if err != nil {
-			continue
-		}
-		switch outputName.OpType {
-		case "continuous":
-			res[outputName.Name] = v.(float64)
-			sum += v.(float64)
-		case "categorical":
-			res[outputName.Name] = v.(string)
+	if mm.Output != nil {
+		for i, v := range res {
+			outputName, err := mm.Output.GetFeature(i)
+			if err != nil {
+				continue
+			}
+			switch outputName.OpType {
+			case "continuous":
+				res[outputName.Name] = v.(float64)
+				sum += v.(float64)
+			case "categorical":
+				res[outputName.Name] = v.(string)
+			}
 		}
 	}
-	for _, v := range mm.Output.OutputFields {
-		if v.Feature == "probability" {
-			val, ok := res[v.Name]
-			if !ok {
-				val = 0.0
+	if mm.Output != nil {
+		for _, v := range mm.Output.OutputFields {
+			if v.Feature == "probability" {
+				val, ok := res[v.Name]
+				if !ok {
+					val = 0.0
+				}
+				res[v.Name] = val.(float64) / sum
 			}
-			res[v.Name] = val.(float64) / sum
 		}
 	}
 	return res, nil

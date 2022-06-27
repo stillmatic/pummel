@@ -118,6 +118,8 @@ func (sg *Segmentation) Evaluate(values map[string]interface{}) (map[string]inte
 		return sg.EvaluateSelectFirst(values)
 	case MultipleModelMethod.ModelChain:
 		return sg.EvaluateModelChain(values)
+	case MultipleModelMethod.Average:
+		return sg.EvaluateAverage(values)
 	default:
 		return nil, fmt.Errorf("unknown multiple model method: %s", sg.MultipleModelMethod)
 	}
@@ -221,5 +223,32 @@ func (sg *Segmentation) EvaluateWeightedAverage(values map[string]interface{}) (
 		totalValue += ret
 	}
 	out := map[string]interface{}{outputName: totalValue}
+	return out, nil
+}
+
+func (sg *Segmentation) EvaluateAverage(values map[string]interface{}) (map[string]interface{}, error) {
+	outputName := sg.Segments[0].ModelElement.GetOutputField()
+	nSegments := float64(len(sg.Segments))
+	out := make(map[string]interface{})
+	count := make(map[string]float64)
+	for _, s := range sg.Segments {
+		res, err := s.Evaluate(values)
+		// fmt.Println("segment", i, "result", res)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to evaluate segment")
+		}
+		for k, v := range res {
+			if k == outputName {
+				newCount := count[k] + v.(float64)
+				count[k] = newCount
+			}
+		}
+	}
+
+	for k, v := range count {
+		out[k] = v / nSegments
+	}
+	fmt.Println("average vote result", out)
+
 	return out, nil
 }

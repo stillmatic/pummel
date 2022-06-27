@@ -120,6 +120,6 @@ func (p *CompoundPredicate) Evaluate(features map[string]interface{}) (null.Bool
 		}
 		return null.BoolFrom(false), nil
 	default:
-		return null.BoolFromPtr(nil), fmt.Errorf("unsupported operator: %s", p.Operator)
+		return null.BoolFromPtr(nil), fmt.Errorf("unsupported compound predicate operator: %s", p.Operator)
 	}
 }

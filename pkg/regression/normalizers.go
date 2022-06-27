@@ -1,6 +1,8 @@
 package regression
 
-import "math"
+import (
+	"math"
+)
 
 type Normalizer interface {
 	Normalize(map[string]interface{}) map[string]interface{}
@@ -24,7 +26,7 @@ func (n SoftMaxNormalizer) Normalize(ys map[string]interface{}) map[string]inter
 func (n LogitNormalizer) Normalize(ys map[string]interface{}) map[string]interface{} {
 	output := make(map[string]interface{}, len(ys))
 	for i, y := range ys {
-		output[i] = math.Log(y.(float64) / (1 - y.(float64)))
+		output[i] = 1 / (1 + math.Exp(-y.(float64)))
 	}
 	return output
 }

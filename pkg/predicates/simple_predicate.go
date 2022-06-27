@@ -42,27 +42,50 @@ func (p *SimplePredicate) Evaluate(features map[string]interface{}) (null.Bool, 
 	case float64:
 		return p.numericTrue(featureValue)
 	case string:
-		if p.Operator == op.Operators.Equal {
-			return null.BoolFrom(p.Value == features[p.Field]), nil
-		}
-		numericFeatureValue, err := strconv.ParseFloat(featureValue, 64)
-		if err == nil {
-			return p.numericTrue(numericFeatureValue)
-		}
+		return p.stringTrue(featureValue)
 	case bool:
 		predicateBool, err := strconv.ParseBool(p.Value)
 		if err != nil {
-			return null.BoolFromPtr(nil), errors.Wrapf(err, "failed to parse value for SimplePredicate %s", p.Field)
+			return null.BoolFromPtr(nil), errors.Wrapf(err, "failed to parse bool value %s", p.Value)
 		}
-		if p.Operator == op.Operators.Equal {
-			return null.BoolFrom(predicateBool == features[p.Field]), nil
-		}
-		if p.Operator == op.Operators.NotEqual {
-			return null.BoolFrom(predicateBool != features[p.Field]), nil
-		}
+		return p.boolTrue(featureValue == predicateBool)
 	}
 
-	return null.BoolFromPtr(nil), errors.Errorf("unsupported operator: %s", p.Operator)
+	return null.BoolFromPtr(nil), errors.Errorf("unsupported simplepredicate operator: %s for type %v", p.Operator, featureValue)
+}
+
+func (p SimplePredicate) stringTrue(featureValue string) (null.Bool, error) {
+	predicateValue := p.Value
+	var b bool
+	switch p.Operator {
+	case op.Operators.Equal:
+		b = featureValue == predicateValue
+	case op.Operators.NotEqual:
+		b = featureValue != predicateValue
+	case op.Operators.Gt, op.Operators.Gte, op.Operators.Lt, op.Operators.Lte:
+		numValue, err := strconv.ParseFloat(predicateValue, 64)
+		if err != nil {
+			return null.BoolFromPtr(nil), errors.Wrapf(err, "failed to parse float value %s", predicateValue)
+		}
+		return p.numericTrue(numValue)
+	default:
+		return null.BoolFromPtr(nil), fmt.Errorf("unsupported stringTrue operator: %s", p.Operator)
+	}
+	return null.BoolFrom(b), nil
+}
+
+func (p SimplePredicate) boolTrue(featureValue bool) (null.Bool, error) {
+	predicateValue, _ := strconv.ParseBool(p.Value)
+	var b bool
+	switch p.Operator {
+	case op.Operators.Equal:
+		b = featureValue == predicateValue
+	case op.Operators.NotEqual:
+		b = featureValue != predicateValue
+	default:
+		return null.BoolFromPtr(nil), fmt.Errorf("unsupported boolTrue operator: %s", p.Operator)
+	}
+	return null.BoolFrom(b), nil
 }
 
 func (p SimplePredicate) numericTrue(featureValue float64) (null.Bool, error) {
@@ -83,7 +106,7 @@ func (p SimplePredicate) numericTrue(featureValue float64) (null.Bool, error) {
 	case op.Operators.Gte:
 		b = featureValue >= predicateValue
 	default:
-		return null.BoolFromPtr(nil), fmt.Errorf("unsupported operator: %s", p.Operator)
+		return null.BoolFromPtr(nil), fmt.Errorf("unsupported numericTrue operator: %s", p.Operator)
 	}
 	return null.BoolFrom(b), nil
 }

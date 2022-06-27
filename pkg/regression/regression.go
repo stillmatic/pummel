@@ -4,25 +4,27 @@ import (
 	"encoding/xml"
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/stillmatic/pummel/pkg/fields"
 	"github.com/stillmatic/pummel/pkg/miningschema"
+	"github.com/stillmatic/pummel/pkg/transformations"
 )
 
 type RegressionModel struct {
-	XMLName          xml.Name                   `xml:"RegressionModel"`
-	RegressionTables []*RegressionTable         `xml:"RegressionTable"`
-	ModelName        string                     `xml:"modelName,attr"`
-	FunctionName     string                     `xml:"functionName,attr"`
-	ModelType        string                     `xml:"modelType,attr"`
-	TargetFieldName  string                     `xml:"targetFieldName,attr"`
-	MiningSchema     *miningschema.MiningSchema `xml:"MiningSchema"`
-	Normalizer       Normalizer
-	IsScorable       bool            `xml:"isScorable,attr"`
-	Output           *fields.Outputs `xml:"Output>OutputField"`
+	XMLName              xml.Name                   `xml:"RegressionModel"`
+	RegressionTables     []*RegressionTable         `xml:"RegressionTable"`
+	ModelName            string                     `xml:"modelName,attr"`
+	FunctionName         string                     `xml:"functionName,attr"`
+	ModelType            string                     `xml:"modelType,attr"`
+	TargetFieldName      string                     `xml:"targetFieldName,attr"`
+	MiningSchema         *miningschema.MiningSchema `xml:"MiningSchema"`
+	Normalizer           Normalizer
+	IsScorable           bool                                 `xml:"isScorable,attr"`
+	Output               *fields.Outputs                      `xml:"Output>OutputField"`
+	LocalTransformations transformations.LocalTransformations `xml:"LocalTransformations"`
 }
 
 func (rm *RegressionModel) GetOutputField() string {
+	// todo: combine with output field name
 	return rm.MiningSchema.GetOutputField()
 }
 
@@ -83,6 +85,13 @@ func (rm *RegressionModel) UnmarshalXML(d *xml.Decoder, start xml.StartElement) 
 					return err
 				}
 				rm.Output = &out
+			case "LocalTransformations":
+				var lt transformations.LocalTransformations
+				err := d.DecodeElement(&lt, &tt)
+				if err != nil {
+					return err
+				}
+				rm.LocalTransformations = lt
 			default:
 				return fmt.Errorf("unknown element: %s", tt.Name.Local)
 			}
@@ -94,6 +103,16 @@ func (rm *RegressionModel) UnmarshalXML(d *xml.Decoder, start xml.StartElement) 
 }
 
 func (rm *RegressionModel) Evaluate(inputs map[string]interface{}) (map[string]interface{}, error) {
+	if len(rm.LocalTransformations.DerivedFields) > 0 {
+		for _, tr := range rm.LocalTransformations.DerivedFields {
+			val, err := tr.Transform(inputs)
+			if err != nil {
+				return nil, err
+			}
+			inputs[tr.RequiredField()] = val
+		}
+	}
+
 	switch rm.FunctionName {
 	case "regression":
 		return rm.EvaluateRegression(inputs)
@@ -110,16 +129,7 @@ func (rm *RegressionModel) EvaluateRegression(inputs map[string]interface{}) (ma
 	if err != nil {
 		return nil, err
 	}
-	var targetFieldName string
-	if rm.Output != nil {
-		pv, err := rm.Output.GetPredictedValue()
-		if err != nil {
-			return nil, err
-		}
-		targetFieldName = pv.Name
-	} else {
-		targetFieldName = rm.GetOutputField()
-	}
+	targetFieldName := rm.GetOutputField()
 
 	out := map[string]interface{}{
 		targetFieldName: val,
@@ -155,12 +165,6 @@ func (rm *RegressionModel) EvaluateClassification(inputs map[string]interface{})
 	if rm.Normalizer != nil {
 		scores = rm.Normalizer.Normalize(scores)
 	}
-	if rm.Output != nil {
-		gpv, err := rm.Output.GetPredictedValue()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get predicted value field")
-		}
-		scores[gpv.Name] = topCategory
-	}
+	scores[rm.GetOutputField()] = topCategory
 	return scores, nil
 }

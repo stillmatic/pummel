@@ -757,7 +757,7 @@ func TestModelChain(t *testing.T) {
 		"cloudiness":   0.5,
 	}
 	res, err := model.Segmentation.Evaluate(input)
-	assert.InEpsilon(t, 0.9785185185185183, res["Pollen Index"], 0.01)
+	assert.InEpsilon(t, 0.9785185185185183, res["PollenIndex"].(float64), 0.01)
 	assert.NoError(t, err)
 }
 
@@ -886,7 +886,7 @@ func TestGBMFixture(t *testing.T) {
 				assert.Equal(t, tc.expectedErr.Error(), err.Error())
 			}
 			if err == nil {
-				assert.InEpsilon(t, tc.expectedScore, res["Probability_1"].(float64), 0.01)
+				assert.InEpsilon(t, tc.expectedScore, res["probability(1)"].(float64), 0.01)
 			}
 		})
 	}
