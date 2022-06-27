@@ -118,28 +118,34 @@ func (sg *Segmentation) Evaluate(values map[string]interface{}) (map[string]inte
 		return sg.EvaluateSelectFirst(values)
 	case MultipleModelMethod.ModelChain:
 		return sg.EvaluateModelChain(values)
-	case MultipleModelMethod.Sum:
-		return sg.EvaluateSum(values)
 	default:
 		return nil, fmt.Errorf("unknown multiple model method: %s", sg.MultipleModelMethod)
 	}
 }
 
-func (sg *Segmentation) EvaluateSum(values map[string]interface{}) (map[string]interface{}, error) {
-	out := values
+func (sg *Segmentation) EvaluateSum(values map[string]interface{}, targets []Target) (map[string]interface{}, error) {
+	// assume only one target
+	target := targets[0]
+	out := make(map[string]interface{}, 1)
+	score := target.RescaleConstant
+	var outputName string
 	for _, s := range sg.Segments {
 		res, err := s.Evaluate(values)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to evaluate segment")
 		}
 		for k, v := range res {
-			if _, ok := out[k]; ok {
-				out[k] = out[k].(float64) + v.(float64)
-			} else {
-				out[k] = v
+			if outputName == "" {
+				outputName = k
 			}
+			score += v.(float64)
 		}
 	}
+	// I suppose you could set it to 0. But why?!
+	if target.RescaleFactor != 0.0 {
+		score *= target.RescaleFactor
+	}
+	out[outputName] = score
 	return out, nil
 }
 
