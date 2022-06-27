@@ -55,6 +55,17 @@ var MultipleModelMethod = struct {
 }
 
 func (mm *MiningModel) Evaluate(values map[string]interface{}) (map[string]interface{}, error) {
+	if mm.LocalTransformations != nil {
+		if len(mm.LocalTransformations.DerivedFields) > 0 {
+			for _, tr := range mm.LocalTransformations.DerivedFields {
+				val, err := tr.Transform(values)
+				if err != nil {
+					return nil, err
+				}
+				values[tr.RequiredField()] = val
+			}
+		}
+	}
 	var sum float64
 	var res map[string]interface{}
 	var err error

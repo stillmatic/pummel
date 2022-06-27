@@ -238,7 +238,7 @@ func (sg *Segmentation) EvaluateAverage(values map[string]interface{}) (map[stri
 			return nil, errors.Wrapf(err, "failed to evaluate segment")
 		}
 		for k, v := range res {
-			if k == outputName {
+			if k != outputName {
 				newCount := count[k] + v.(float64)
 				count[k] = newCount
 			}
@@ -248,7 +248,7 @@ func (sg *Segmentation) EvaluateAverage(values map[string]interface{}) (map[stri
 	for k, v := range count {
 		out[k] = v / nSegments
 	}
-	fmt.Println("average vote result", out)
+	// fmt.Println("average vote result", out)
 
 	return out, nil
 }

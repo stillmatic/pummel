@@ -202,9 +202,19 @@ func (fr *FieldRef) Transform(values map[string]interface{}) (interface{}, error
 		return nil, errors.New("missing field " + fr.Field)
 	}
 	switch fr.DataType {
-	case "float":
-		return strconv.ParseFloat(value.(string), 64)
-	case "double":
+	case "float", "double":
+		switch v := value.(type) {
+		case float64:
+			return v, nil
+		case int:
+			return float64(v), nil
+		case string:
+			parsed, err := strconv.ParseFloat(v, 64)
+			if err != nil {
+				return nil, err
+			}
+			return parsed, nil
+		}
 		return strconv.ParseFloat(value.(string), 64)
 	default:
 		return value, nil

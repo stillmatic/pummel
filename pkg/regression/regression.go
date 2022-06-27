@@ -103,13 +103,15 @@ func (rm *RegressionModel) UnmarshalXML(d *xml.Decoder, start xml.StartElement) 
 }
 
 func (rm *RegressionModel) Evaluate(inputs map[string]interface{}) (map[string]interface{}, error) {
-	if len(rm.LocalTransformations.DerivedFields) > 0 {
-		for _, tr := range rm.LocalTransformations.DerivedFields {
-			val, err := tr.Transform(inputs)
-			if err != nil {
-				return nil, err
+	if rm.LocalTransformations.DerivedFields != nil {
+		if len(rm.LocalTransformations.DerivedFields) > 0 {
+			for _, tr := range rm.LocalTransformations.DerivedFields {
+				val, err := tr.Transform(inputs)
+				if err != nil {
+					return nil, err
+				}
+				inputs[tr.RequiredField()] = val
 			}
-			inputs[tr.RequiredField()] = val
 		}
 	}
 
