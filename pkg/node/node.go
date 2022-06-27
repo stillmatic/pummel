@@ -81,7 +81,10 @@ func (n *Node) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 			n.Score = attr.Value
 		case "recordCount":
 			n.RecordCount, _ = strconv.Atoi(attr.Value)
+		case "defaultChild":
+			n.DefaultChild = attr.Value
 		}
+
 	}
 	for {
 		t, err := d.Token()
@@ -140,7 +143,7 @@ func (n *Node) Evaluate(features map[string]interface{}) (null.Bool, error) {
 
 func (n *Node) GetDefaultChild() (*Node, error) {
 	if n.DefaultChild == "" {
-		return nil, nil
+		return nil, fmt.Errorf("no default child specified")
 	}
 	for _, child := range n.Children {
 		if child.ID == n.DefaultChild {
@@ -215,4 +218,17 @@ func (n *Node) CheckScoreDistributionClasses() (bool, error) {
 		}
 	}
 	return true, nil
+}
+
+func (n *Node) HandleScoreDistributions() (map[string]float64, float64, error) {
+	var sum float64
+	vals := make(map[string]float64, len(n.ScoreDistributions))
+	for _, sd := range n.ScoreDistributions {
+		// if sd.Probability > 0 {
+		// 	vals[sd.Value] = sd.Probability
+		// }
+		vals[sd.Value] = float64(sd.RecordCount)
+		sum += float64(sd.RecordCount)
+	}
+	return vals, sum, nil
 }

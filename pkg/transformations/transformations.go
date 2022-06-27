@@ -29,9 +29,14 @@ type DerivedField struct {
 	DisplayName string   `xml:"displayName,attr"`
 	OpType      string   `xml:"opType,attr"`
 	DataType    string   `xml:"dataType,attr"`
+	Values      []Value  `xml:"Value"`
 	Expression  *Expression
 }
 
+type Value struct {
+	XMLName xml.Name `xml:"Value"`
+	Value   string   `xml:"value,attr"`
+}
 type FieldRef struct {
 	XMLName      xml.Name `xml:"FieldRef"`
 	Field        string   `xml:"field,attr"`
@@ -74,7 +79,7 @@ func (lt *LocalTransformations) UnmarshalXML(d *xml.Decoder, start xml.StartElem
 // custom XML unmarshal for DerivedField
 func (df *DerivedField) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	df.XMLName = start.Name
-	// df.RequiredFields = make([]string, 0)
+	df.Values = make([]Value, 0)
 	for _, attr := range start.Attr {
 		switch attr.Name.Local {
 		case "name":
@@ -102,6 +107,12 @@ func (df *DerivedField) UnmarshalXML(d *xml.Decoder, start xml.StartElement) err
 				expr = &Apply{}
 			case "Constant":
 				expr = &Constant{}
+			case "Value":
+				var val Value
+				if err := d.DecodeElement(&val, &tt); err != nil {
+					return err
+				}
+				df.Values = append(df.Values, val)
 			default:
 				return fmt.Errorf("unexpected element in DerivedField: %s", tt.Name.Local)
 			}
@@ -198,24 +209,15 @@ func (df *DerivedField) RequiredField() string {
 
 func (fr *FieldRef) Transform(values map[string]interface{}) (interface{}, error) {
 	value, ok := values[fr.Field]
+	if value == nil {
+		return nil, nil
+	}
 	if !ok {
 		return nil, errors.New("missing field " + fr.Field)
 	}
 	switch fr.DataType {
 	case "float", "double":
-		switch v := value.(type) {
-		case float64:
-			return v, nil
-		case int:
-			return float64(v), nil
-		case string:
-			parsed, err := strconv.ParseFloat(v, 64)
-			if err != nil {
-				return nil, err
-			}
-			return parsed, nil
-		}
-		return strconv.ParseFloat(value.(string), 64)
+		return InterfaceToFloat64(value)
 	default:
 		return value, nil
 	}
@@ -242,6 +244,42 @@ func (c *Constant) RequiredField() string {
 }
 
 func (a *Apply) Transform(values map[string]interface{}) (interface{}, error) {
+	switch a.Function {
+	case "isMissing":
+		// assume that there is a single fieldref
+		ref, ok := values[(*a.Children[0]).RequiredField()]
+		found := (!ok || ref == "")
+		return interface{}(found), nil
+	case "equal":
+		// assume that there are two fieldrefs
+		l, err := (*a.Children[0]).Transform(values)
+		if err != nil {
+			return nil, err
+		}
+		r, err := (*a.Children[1]).Transform(values)
+		if err != nil {
+			return nil, err
+		}
+		return interface{}(l == r), nil
+	case "isIn":
+		// is first child in the rest of the children
+		l, err := (*a.Children[0]).Transform(values)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range a.Children[1:] {
+			val, err := (*r).Transform(values)
+			if err != nil {
+				return nil, err
+			}
+			if l == val {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+
+	var lf, rf, res float64
 	if len(a.Children) < 2 {
 		return nil, errors.New("Apply requires at least two children")
 	}
@@ -254,41 +292,42 @@ func (a *Apply) Transform(values map[string]interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error transforming right")
 	}
-	var lf, rf float64
-	// TODO: this isn't right if these aren't actually numbers but yolo
-	switch l := l.(type) {
-	case float64:
-		lf = l
-	case int:
-		lf = float64(l)
-	case string:
-		lf, err = strconv.ParseFloat(l, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "error parsing left %v", l)
-		}
-	default:
-		return nil, errors.Errorf("left is not a number %v", l)
+
+	rf, err = InterfaceToFloat64(r)
+	if err != nil {
+		return nil, errors.Wrap(err, "error converting right to float64")
 	}
-	switch r := r.(type) {
-	case float64:
-		rf = r
-	case int:
-		rf = float64(r)
-	case string:
-		rf, err = strconv.ParseFloat(r, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "error parsing right %v", r)
-		}
-	default:
-		return nil, errors.Errorf("right is not a number %v", r)
+	lf, err = InterfaceToFloat64(l)
+	if err != nil {
+		return nil, errors.Wrap(err, "error converting left to float64")
 	}
+
 	switch a.Function {
 	case "-":
-		return interface{}(lf - rf), nil
+		res = lf - rf
+		return interface{}(res), nil
 	case "*":
-		return interface{}(lf * rf), nil
+		res = lf * rf
+		return interface{}(res), nil
 	case "/":
-		return interface{}(lf / rf), nil
+		res = lf / rf
+		return interface{}(res), nil
 	}
 	return nil, nil
+}
+
+func InterfaceToFloat64(val interface{}) (float64, error) {
+	switch val := val.(type) {
+	case float64:
+		return val, nil
+	case int:
+		return float64(val), nil
+	case string:
+		parsed, err := strconv.ParseFloat(val, 64)
+		if err != nil {
+			return 0, err
+		}
+		return parsed, nil
+	}
+	return 0, nil
 }

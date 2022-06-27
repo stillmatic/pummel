@@ -75,27 +75,17 @@ func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interf
 		return nil, fmt.Errorf("terminal node without score, Node id: %v", curr.ID)
 	}
 
+	// this is the length of the number of outputs
 	out := make(map[string]interface{}, 0)
 	outputField := t.GetOutputField()
-	if t.FunctionName == "regression" {
-		parsed, err := strconv.ParseFloat(curr.Score, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse score %s", curr.Score)
-		}
-		out[outputField] = parsed
-	} else {
-		out[outputField] = curr.Score
-	}
+
 	if curr.ScoreDistributions != nil {
 		var sum float64
-		vals := make(map[string]float64, len(curr.ScoreDistributions))
-		for _, sd := range curr.ScoreDistributions {
-			// if sd.Probability > 0 {
-			// 	vals[sd.Value] = sd.Probability
-			// }
-			vals[sd.Value] = float64(sd.RecordCount)
-			sum += float64(sd.RecordCount)
+		vals, sum, err := curr.HandleScoreDistributions()
+		if err != nil {
+			return nil, err
 		}
+
 		for i, val := range vals {
 			var nameForField string
 			if t.Output != nil {
@@ -111,6 +101,15 @@ func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interf
 		}
 	}
 
+	if t.FunctionName == "regression" {
+		parsed, err := strconv.ParseFloat(curr.Score, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse score")
+		}
+		out[outputField] = parsed
+	} else {
+		out[outputField] = curr.Score
+	}
 	if t.Output != nil {
 		for _, output := range t.Output.OutputFields {
 			switch output.Feature {
@@ -140,6 +139,9 @@ func (t *TreeModel) traverse(features map[string]interface{}) (*node.Node, error
 				case MissingValueStrategy.NullPrediction:
 					return nil, nil
 				case MissingValueStrategy.DefaultChild:
+					if curr.DefaultChild == "" {
+						break
+					}
 					curr, err = curr.GetDefaultChild()
 					if err != nil {
 						return nil, err

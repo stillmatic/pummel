@@ -11,6 +11,10 @@ import (
 	"github.com/stillmatic/pummel/pkg/tree"
 )
 
+const (
+	SegmentFailEval = "failed to evaluate segment"
+)
+
 type Segmentation struct {
 	XMLName             xml.Name  `xml:"Segmentation"`
 	MultipleModelMethod string    `xml:"multipleModelMethod,attr"`
@@ -102,7 +106,7 @@ func (s *Segment) Evaluate(values map[string]interface{}) (map[string]interface{
 	}
 	res, err := s.ModelElement.Evaluate(values)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to evaluate model element")
+		return nil, errors.Wrapf(err, SegmentFailEval)
 	}
 	return res, nil
 }
@@ -126,10 +130,14 @@ func (sg *Segmentation) Evaluate(values map[string]interface{}) (map[string]inte
 }
 
 func (sg *Segmentation) EvaluateSum(values map[string]interface{}, targets []Target) (map[string]interface{}, error) {
+	var rescaleConstant, rescaleFactor float64
+	if targets != nil {
+		rescaleConstant = targets[0].RescaleConstant
+		rescaleFactor = targets[0].RescaleFactor
+	}
 	// assume only one target
-	target := targets[0]
 	out := make(map[string]interface{}, 1)
-	score := target.RescaleConstant
+	score := rescaleConstant
 	var outputName string
 	for _, s := range sg.Segments {
 		res, err := s.Evaluate(values)
@@ -144,8 +152,8 @@ func (sg *Segmentation) EvaluateSum(values map[string]interface{}, targets []Tar
 		}
 	}
 	// I suppose you could set it to 0. But why?!
-	if target.RescaleFactor != 0.0 {
-		score *= target.RescaleFactor
+	if rescaleFactor != 0.0 {
+		score *= rescaleFactor
 	}
 	out[outputName] = score
 	return out, nil
@@ -155,7 +163,7 @@ func (sg *Segmentation) EvaluateModelChain(values map[string]interface{}) (map[s
 	for _, s := range sg.Segments {
 		res, err := s.Evaluate(values)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to evaluate segment")
+			return nil, errors.Wrapf(err, SegmentFailEval)
 		}
 		for k, v := range res {
 			values[k] = v
@@ -168,7 +176,7 @@ func (sg *Segmentation) EvaluateSelectFirst(values map[string]interface{}) (map[
 	for _, s := range sg.Segments {
 		res, err := s.Evaluate(values)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to evaluate segment")
+			return nil, errors.Wrap(err, SegmentFailEval)
 		}
 		if res != nil {
 			return res, nil
@@ -187,7 +195,7 @@ func (sg *Segmentation) EvaluateMajorityVote(values map[string]interface{}) (map
 		res, err := s.Evaluate(values)
 		// fmt.Println("segment", i, "result", res)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to evaluate segment")
+			return nil, errors.Wrapf(err, SegmentFailEval)
 		}
 		for k, v := range res {
 			if k == outputName {
@@ -217,7 +225,7 @@ func (sg *Segmentation) EvaluateWeightedAverage(values map[string]interface{}) (
 	for _, s := range sg.Segments {
 		res, err := s.Evaluate(values)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to evaluate segment")
+			return nil, errors.Wrapf(err, SegmentFailEval)
 		}
 		ret := res[outputName].(float64) * s.Weight
 		totalValue += ret
@@ -235,7 +243,7 @@ func (sg *Segmentation) EvaluateAverage(values map[string]interface{}) (map[stri
 		res, err := s.Evaluate(values)
 		// fmt.Println("segment", i, "result", res)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to evaluate segment")
+			return nil, errors.Wrapf(err, SegmentFailEval)
 		}
 		for k, v := range res {
 			if k != outputName {

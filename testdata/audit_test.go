@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var MAX_GOROUTINES = 4
+
 type AuditInput struct {
 	Age        int
 	Employment string
@@ -63,8 +65,6 @@ func ParseAuditInput(input string) (map[string]interface{}, error) {
 	ai["Adjusted"] = adj
 	return ai, nil
 }
-
-var MAX_GOROUTINES = 24
 
 //nolint
 func BenchmarkAuditLR(b *testing.B) {
@@ -224,9 +224,11 @@ func BenchmarkAuditRF(b *testing.B) {
 			inputs = append(inputs, ai)
 		}
 	}
+	s := rand.NewSource(42)
+	r := rand.New(s)
 
 	for i := 0; i < b.N; i++ {
-		inp := inputs[i%len(inputs)]
+		inp := inputs[r.Intn(len(inputs))]
 		model.MiningModel.Evaluate(inp)
 	}
 }

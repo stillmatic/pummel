@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 	op "github.com/stillmatic/pummel/pkg/operators"
@@ -25,13 +26,13 @@ func (p *SimplePredicate) String() string {
 
 func (p *SimplePredicate) Evaluate(features map[string]interface{}) (null.Bool, error) {
 	featureValue, exists := features[p.Field]
-	if p.Operator == op.Operators.IsMissing {
+	switch p.Operator {
+	case op.Operators.IsMissing:
 		return null.BoolFrom(featureValue == "" || featureValue == nil || !exists), nil
-	}
-	if p.Operator == op.Operators.IsNotMissing {
+	case op.Operators.IsNotMissing:
 		return null.BoolFrom(featureValue != nil && exists && featureValue != ""), nil
 	}
-	if !exists {
+	if !exists || featureValue == nil {
 		// returns a null bool if the feature is missing and it isn't a missing/is not missing operator
 		return null.BoolFromPtr(nil), nil
 	}
@@ -54,14 +55,14 @@ func (p *SimplePredicate) Evaluate(features map[string]interface{}) (null.Bool, 
 	return null.BoolFromPtr(nil), errors.Errorf("unsupported simplepredicate operator: %s for type %v", p.Operator, featureValue)
 }
 
-func (p SimplePredicate) stringTrue(featureValue string) (null.Bool, error) {
+func (p *SimplePredicate) stringTrue(featureValue string) (null.Bool, error) {
 	predicateValue := p.Value
 	var b bool
 	switch p.Operator {
 	case op.Operators.Equal:
-		b = featureValue == predicateValue
+		b = strings.EqualFold(featureValue, predicateValue)
 	case op.Operators.NotEqual:
-		b = featureValue != predicateValue
+		b = !strings.EqualFold(featureValue, predicateValue)
 	case op.Operators.Gt, op.Operators.Gte, op.Operators.Lt, op.Operators.Lte:
 		numValue, err := strconv.ParseFloat(predicateValue, 64)
 		if err != nil {

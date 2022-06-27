@@ -2,7 +2,8 @@ package fields
 
 import (
 	"encoding/xml"
-	"fmt"
+
+	"github.com/pkg/errors"
 )
 
 type Outputs struct {
@@ -19,16 +20,21 @@ type OutputField struct {
 	Value       string   `xml:"value,attr"`
 }
 
+var (
+	errNoOutputFields            = errors.New("no output fields")
+	errNoOutputFieldsWithFeature = errors.New("no output fields with feature")
+)
+
 func (o *Outputs) GetFeature(value string) (*OutputField, error) {
 	if o.OutputFields == nil {
-		return nil, fmt.Errorf("no output fields")
+		return nil, errNoOutputFields
 	}
 	for _, output := range o.OutputFields {
 		if output.Value == value {
 			return output, nil
 		}
 	}
-	return nil, fmt.Errorf("no output field with value %s", value)
+	return nil, errors.Wrapf(errNoOutputFieldsWithFeature, "value: %s", value)
 }
 
 func (o *Outputs) GetPredictedValue() (*OutputField, error) {
@@ -37,5 +43,5 @@ func (o *Outputs) GetPredictedValue() (*OutputField, error) {
 			return output, nil
 		}
 	}
-	return nil, fmt.Errorf("no output field with feature predictedValue")
+	return nil, errors.Wrapf(errNoOutputFieldsWithFeature, "predictedValue")
 }

@@ -87,16 +87,14 @@ func (mm *MiningModel) Evaluate(values map[string]interface{}) (map[string]inter
 			if err != nil {
 				continue
 			}
-			switch outputName.OpType {
-			case "continuous":
+			switch outputName.DataType {
+			case "double":
 				res[outputName.Name] = v.(float64)
 				sum += v.(float64)
-			case "categorical":
+			case "string":
 				res[outputName.Name] = v.(string)
 			}
 		}
-	}
-	if mm.Output != nil {
 		for _, v := range mm.Output.OutputFields {
 			if v.Feature == "probability" {
 				val, ok := res[v.Name]
