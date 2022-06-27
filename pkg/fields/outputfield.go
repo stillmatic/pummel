@@ -20,10 +20,10 @@ type OutputField struct {
 }
 
 func (o *Outputs) GetFeature(value string) (*OutputField, error) {
-	if (*o).OutputFields == nil {
+	if o.OutputFields == nil {
 		return nil, fmt.Errorf("no output fields")
 	}
-	for _, output := range (*o).OutputFields {
+	for _, output := range o.OutputFields {
 		if output.Value == value {
 			return output, nil
 		}
@@ -32,7 +32,7 @@ func (o *Outputs) GetFeature(value string) (*OutputField, error) {
 }
 
 func (o *Outputs) GetPredictedValue() (*OutputField, error) {
-	for _, output := range (*o).OutputFields {
+	for _, output := range o.OutputFields {
 		if output.Feature == "predictedValue" {
 			return output, nil
 		}

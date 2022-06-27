@@ -20,5 +20,5 @@ func TestParseOutputFields(t *testing.T) {
 	err := xml.Unmarshal(outputXML, &output)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(output.OutputFields))
-	assert.Equal(t, "Predicted_Survived", output.OutputFields["predictedValue"].Name)
+	assert.Equal(t, "Predicted_Survived", output.OutputFields[0].Name)
 }

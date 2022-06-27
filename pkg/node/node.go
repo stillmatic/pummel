@@ -17,7 +17,7 @@ type Node struct {
 	Score              string                `xml:"score,attr"`
 	RecordCount        int                   `xml:"recordCount,attr"`
 	ScoreDistributions []*ScoreDistribution  `xml:"ScoreDistribution"`
-	Children           []Node                `xml:"Node"`
+	Children           []*Node               `xml:"Node"`
 	// DefaultChild gives the id of the child node to use when no predicates can be evaluated due to missing values.
 	// Note that only Nodes which are immediate children of the respective Node can be referenced.
 	DefaultChild string `xml:"defaultChild,attr"`
@@ -42,7 +42,7 @@ type ScoreDistribution struct {
 	Probability float64  `xml:"probability,attr"`
 }
 
-func (n Node) EqualTo(other Node) bool {
+func (n *Node) EqualTo(other *Node) bool {
 	if n.XMLName != other.XMLName {
 		return false
 	}
@@ -66,13 +66,13 @@ func (n Node) EqualTo(other Node) bool {
 	return true
 }
 
-func (n Node) String() string {
+func (n *Node) String() string {
 	return fmt.Sprintf("Node(ID: %s, score: %s)", n.ID, n.Score)
 }
 
 func (n *Node) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	n.XMLName = start.Name
-	n.Children = make([]Node, 0)
+	n.Children = make([]*Node, 0)
 	for _, attr := range start.Attr {
 		switch attr.Name.Local {
 		case "id":
@@ -110,7 +110,7 @@ func (n *Node) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 				if err != nil {
 					return err
 				}
-				n.Children = append(n.Children, child)
+				n.Children = append(n.Children, &child)
 			// append this scoredistribution to the list of scoredistributions
 			case "ScoreDistribution":
 				err = d.DecodeElement(&scoreDistribution, &tt)
@@ -133,7 +133,7 @@ func (n *Node) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	}
 }
 
-func (n *Node) True(features map[string]interface{}) (null.Bool, error) {
+func (n *Node) Evaluate(features map[string]interface{}) (null.Bool, error) {
 	res, err := (*n.Predicate).Evaluate(features)
 	return res, err
 }
@@ -144,7 +144,7 @@ func (n *Node) GetDefaultChild() (*Node, error) {
 	}
 	for _, child := range n.Children {
 		if child.ID == n.DefaultChild {
-			return &child, nil
+			return child, nil
 		}
 	}
 	return nil, fmt.Errorf("default child not found: %s", n.DefaultChild)
@@ -159,7 +159,7 @@ func (n *Node) GetRecordCount() int {
 }
 
 func (n *Node) GetClasses() []string {
-	classes := make([]string, 0, len(n.ScoreDistributions))
+	classes := make([]string, len(n.ScoreDistributions))
 	for _, sd := range n.ScoreDistributions {
 		classes = append(classes, sd.Value)
 	}

@@ -77,6 +77,9 @@ func TestSimpleNode(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "0", node.Score)
 	assert.Equal(t, 1, len(node.Children))
+	res, err := node.Evaluate(map[string]interface{}{"prob1": 0.34})
+	assert.NoError(t, err)
+	assert.True(t, res.ValueOrZero())
 }
 
 type NodeEqualityTest struct {
@@ -89,27 +92,27 @@ var NodeEqualityTests = []NodeEqualityTest{
 	{
 		NodeA: &node.Node{
 			Score: "0",
-			Children: []node.Node{
+			Children: []*node.Node{
 				{
 					Score:    "1",
-					Children: make([]node.Node, 0),
+					Children: make([]*node.Node, 0),
 				},
 				{
 					Score:    "1",
-					Children: make([]node.Node, 0),
+					Children: make([]*node.Node, 0),
 				},
 			},
 		},
 		NodeB: &node.Node{
 			Score: "0",
-			Children: []node.Node{
+			Children: []*node.Node{
 				{
 					Score:    "1",
-					Children: make([]node.Node, 0),
+					Children: make([]*node.Node, 0),
 				},
 				{
 					Score:    "1",
-					Children: make([]node.Node, 0),
+					Children: make([]*node.Node, 0),
 				},
 			},
 		},
@@ -118,22 +121,22 @@ var NodeEqualityTests = []NodeEqualityTest{
 	{
 		NodeA: &node.Node{
 			Score:    "0",
-			Children: []node.Node{},
+			Children: []*node.Node{},
 		},
 		NodeB: &node.Node{
 			Score:    "0",
-			Children: []node.Node{},
+			Children: []*node.Node{},
 		},
 		Expected: true,
 	},
 	{
 		NodeA: &node.Node{
 			Score:    "1",
-			Children: []node.Node{},
+			Children: []*node.Node{},
 		},
 		NodeB: &node.Node{
 			Score:    "0",
-			Children: []node.Node{},
+			Children: []*node.Node{},
 		},
 		Expected: false,
 	},
@@ -141,16 +144,16 @@ var NodeEqualityTests = []NodeEqualityTest{
 		NodeA: &node.Node{
 			Score:    "1",
 			ID:       "N1",
-			Children: []node.Node{},
+			Children: []*node.Node{},
 		},
 		NodeB: &node.Node{
 			Score: "1",
 			ID:    "N1",
-			Children: []node.Node{
+			Children: []*node.Node{
 				{
 					Score:    "1",
 					ID:       "T1",
-					Children: make([]node.Node, 0),
+					Children: make([]*node.Node, 0),
 				},
 			},
 		},
@@ -160,22 +163,22 @@ var NodeEqualityTests = []NodeEqualityTest{
 		NodeA: &node.Node{
 			Score: "1",
 			ID:    "N1",
-			Children: []node.Node{
+			Children: []*node.Node{
 				{
 					Score:    "2",
 					ID:       "T1",
-					Children: make([]node.Node, 0),
+					Children: make([]*node.Node, 0),
 				},
 			},
 		},
 		NodeB: &node.Node{
 			Score: "1",
 			ID:    "N1",
-			Children: []node.Node{
+			Children: []*node.Node{
 				{
 					Score:    "1",
 					ID:       "T1",
-					Children: make([]node.Node, 0),
+					Children: make([]*node.Node, 0),
 				},
 			},
 		},
@@ -185,6 +188,6 @@ var NodeEqualityTests = []NodeEqualityTest{
 
 func TestNodeEquality(t *testing.T) {
 	for _, test := range NodeEqualityTests {
-		assert.Equal(t, test.Expected, test.NodeA.EqualTo(*test.NodeB))
+		assert.Equal(t, test.Expected, test.NodeA.EqualTo(test.NodeB))
 	}
 }

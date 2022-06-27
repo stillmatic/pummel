@@ -68,7 +68,7 @@ var InvalidValueTreatmentMethods = struct {
 
 func (ms *MiningSchema) GetOutputField() string {
 	var out string
-	for _, f := range (*ms).MiningFields {
+	for _, f := range ms.MiningFields {
 		// 'predicted' is valid but deprecated as of PMML 4.2
 		if f.UsageType == "predicted" || f.UsageType == "target" {
 			out = f.Name

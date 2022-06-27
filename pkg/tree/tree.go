@@ -59,7 +59,7 @@ var MissingValueStrategy = struct {
 }
 
 func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interface{}, error) {
-	rootPredRes, err := t.Node.True(features)
+	rootPredRes, err := t.Node.Evaluate(features)
 	if err != nil {
 		return nil, err
 	}
@@ -75,10 +75,6 @@ func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interf
 		return nil, fmt.Errorf("terminal node without score, Node id: %v", curr.ID)
 	}
 
-	// var lenOut int
-	// if t.Output != nil {
-	// 	lenOut = len((*t.Output).OutputFields)
-	// }
 	out := make(map[string]interface{}, 0)
 	outputField := t.GetOutputField()
 	if t.FunctionName == "regression" {
@@ -116,7 +112,7 @@ func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interf
 	}
 
 	if t.Output != nil {
-		for _, output := range (*t.Output).OutputFields {
+		for _, output := range t.Output.OutputFields {
 			switch output.Feature {
 			case "predictedValue":
 				out[output.Name] = curr.Score
@@ -132,7 +128,7 @@ func (t *TreeModel) traverse(features map[string]interface{}) (*node.Node, error
 	for len(curr.Children) > 0 {
 		prevNode := curr
 		for _, child := range curr.Children {
-			predRes, err := child.True(features)
+			predRes, err := child.Evaluate(features)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to evaluate child %s", child)
 			}
@@ -151,7 +147,7 @@ func (t *TreeModel) traverse(features map[string]interface{}) (*node.Node, error
 				}
 			}
 			if predRes.Valid && predRes.Bool {
-				curr = &child
+				curr = child
 				break
 			}
 		}
