@@ -22,8 +22,8 @@ type Segmentation struct {
 }
 
 type Segment struct {
-	XMLName      xml.Name                `xml:"Segment"`
-	Predicates   []*predicates.Predicate `xml:"Predicate"`
+	XMLName      xml.Name               `xml:"Segment"`
+	Predicates   []predicates.Predicate `xml:"Predicate"`
 	ModelElement ModelElement
 	ID           string  `xml:"id,attr"`
 	Weight       float64 `xml:"weight,attr"`
@@ -32,7 +32,7 @@ type Segment struct {
 // custom xml unmarshaler for Segment
 func (s *Segment) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	s.XMLName = start.Name
-	s.Predicates = make([]*predicates.Predicate, 0)
+	s.Predicates = make([]predicates.Predicate, 0)
 	for _, attr := range start.Attr {
 		switch attr.Name.Local {
 		case "id":
@@ -88,7 +88,7 @@ func (s *Segment) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 				if err := d.DecodeElement(&p, &tt); err != nil {
 					return err
 				}
-				s.Predicates = append(s.Predicates, &p)
+				s.Predicates = append(s.Predicates, p)
 			}
 		case xml.EndElement:
 			return nil
@@ -100,7 +100,7 @@ func (s *Segment) Evaluate(values map[string]interface{}) (map[string]interface{
 	// out := make(map[string]interface{})
 	for _, p := range s.Predicates {
 		// skip if predicate is not satisfied
-		if predEval, _ := (*p).Evaluate(values); !predEval.ValueOrZero() {
+		if predEval, _ := p.Evaluate(values); !predEval.ValueOrZero() {
 			return nil, nil
 		}
 	}

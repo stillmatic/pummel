@@ -82,6 +82,23 @@ func TestSimpleNode(t *testing.T) {
 	assert.True(t, res.ValueOrZero())
 }
 
+func TestSimpleNodeMissing(t *testing.T) {
+	nodeXML := []byte(`
+	<Node id="T1" score="1">
+	<SimplePredicate field="prob1" operator="greaterThan" value="0.33"/>
+	</Node>
+	`)
+	var node *node.Node
+	err := xml.Unmarshal(nodeXML, &node)
+	assert.NoError(t, err)
+	assert.Equal(t, "1", node.Score)
+	assert.Equal(t, 0, len(node.Children))
+	res, err := node.Evaluate(map[string]interface{}{})
+	assert.NoError(t, err)
+	assert.False(t, res.Valid)
+	assert.False(t, res.ValueOrZero())
+}
+
 type NodeEqualityTest struct {
 	NodeA    *node.Node
 	NodeB    *node.Node

@@ -806,7 +806,7 @@ var RFFixtureCases = []struct {
 			"Embarked": "UnknownCategory",
 		},
 		0.0,
-		errors.New("failed to evaluate segmentation: failed to evaluate segment: failed to evaluate model element: terminal node without score, Node id: 1"),
+		errors.New("failed to evaluate segmentation: failed to evaluate segment: failed to evaluate segment: terminal node without score, Node id: 1"),
 	},
 }
 

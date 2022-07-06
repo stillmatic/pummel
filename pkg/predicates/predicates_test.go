@@ -75,6 +75,23 @@ var simplePredicateTests = []predicateTest{
 	{predicateInput{[]byte(`<SimplePredicate field="age" operator="isNotMissing"/>`), map[string]interface{}{"age": ""}}, false},
 }
 
+func TestSimplePredicates(t *testing.T) {
+	for _, test := range simplePredicateTests {
+		var sp predicates.SimplePredicate
+		err := xml.Unmarshal(test.inputs.bytes, &sp)
+		if err != nil {
+			t.Fatal("could not unmarshal xml")
+		}
+		res, err := sp.Evaluate(test.inputs.features)
+		assert.NoError(t, err)
+		assert.True(t, res.Valid, "expected %s %v to be true", sp.Operator, test.inputs.features)
+		assert.Equal(t, test.expected, res.ValueOrZero())
+		if res.ValueOrZero() != test.expected {
+			t.Errorf("error comparing %v versus %v, with %s", sp.Value, test.inputs.features, sp.Operator)
+		}
+	}
+}
+
 var simpleSetPredicateTests = []predicateTest{
 	{predicateInput{[]byte(`
 		<SimpleSetPredicate field="age" booleanOperator="isIn">
@@ -96,23 +113,6 @@ var simpleSetPredicateTests = []predicateTest{
 		<Array type="string">29 30</Array>
 	</SimpleSetPredicate>
 	`), map[string]interface{}{"age": "30"}}, false},
-}
-
-func TestSimplePredicates(t *testing.T) {
-	for _, test := range simplePredicateTests {
-		var sp predicates.SimplePredicate
-		err := xml.Unmarshal(test.inputs.bytes, &sp)
-		if err != nil {
-			t.Fatal("could not unmarshal xml")
-		}
-		res, err := sp.Evaluate(test.inputs.features)
-		assert.NoError(t, err)
-		assert.True(t, res.Valid, "expected %s %v to be true", sp.Operator, test.inputs.features)
-		assert.Equal(t, test.expected, res.ValueOrZero())
-		if res.ValueOrZero() != test.expected {
-			t.Errorf("error comparing %v versus %v, with %s", sp.Value, test.inputs.features, sp.Operator)
-		}
-	}
 }
 
 func TestSimpleSetPredicates(t *testing.T) {

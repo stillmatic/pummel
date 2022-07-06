@@ -60,7 +60,7 @@ func (p *SimpleSetPredicate) String() string {
 
 func (p *SimpleSetPredicate) Evaluate(features map[string]interface{}) (null.Bool, error) {
 	featureVal, exists := features[p.Field]
-	if !exists {
+	if !exists || featureVal == nil {
 		return null.BoolFromPtr(nil), nil
 	}
 

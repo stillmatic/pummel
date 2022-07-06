@@ -13,14 +13,14 @@ import (
 // booleanOperator can take one of the following logical (boolean) operators: and, or, xor or surrogate.
 type CompoundPredicate struct {
 	XMLName    xml.Name `xml:"CompoundPredicate"`
-	Predicates []*Predicate
+	Predicates []Predicate
 	Operator   string `xml:"booleanOperator,attr"`
 }
 
 func (p *CompoundPredicate) String() string {
 	var predicates []string
 	for _, predicate := range p.Predicates {
-		predicates = append(predicates, (*predicate).String())
+		predicates = append(predicates, predicate.String())
 	}
 	return fmt.Sprintf("CompoundPredicate(%s(%s))", p.Operator, predicates)
 }
@@ -57,7 +57,7 @@ func (cp *CompoundPredicate) UnmarshalXML(d *xml.Decoder, start xml.StartElement
 			if err := d.DecodeElement(&p, &tt); err != nil {
 				return err
 			}
-			cp.Predicates = append(cp.Predicates, &p)
+			cp.Predicates = append(cp.Predicates, p)
 		case xml.EndElement:
 			return nil
 		}
@@ -70,7 +70,7 @@ func (p *CompoundPredicate) Evaluate(features map[string]interface{}) (null.Bool
 	case op.Operators.And:
 		// The operator and indicates an evaluation to TRUE if all the predicates evaluate to TRUE.
 		for _, predicate := range p.Predicates {
-			eval, err := (*predicate).Evaluate(features)
+			eval, err := predicate.Evaluate(features)
 			if err != nil {
 				return null.BoolFromPtr(nil), errors.Wrapf(err, "Error when evaluating predicate %s", p)
 			}
@@ -83,7 +83,7 @@ func (p *CompoundPredicate) Evaluate(features map[string]interface{}) (null.Bool
 	case op.Operators.Or:
 		// The operator or indicates an evaluation to TRUE if one of the predicates evaluates to TRUE.
 		for _, predicate := range p.Predicates {
-			eval, err := (*predicate).Evaluate(features)
+			eval, err := predicate.Evaluate(features)
 			if err != nil {
 				return null.BoolFromPtr(nil), errors.Wrapf(err, "Error when evaluating predicate %s", p)
 			}
@@ -97,7 +97,7 @@ func (p *CompoundPredicate) Evaluate(features map[string]interface{}) (null.Bool
 		// The operator xor indicates an evaluation to TRUE if an odd number of the predicates evaluates to TRUE and all others evaluate to FALSE.
 		count := 0
 		for _, predicate := range p.Predicates {
-			eval, err := (*predicate).Evaluate(features)
+			eval, err := predicate.Evaluate(features)
 			if err != nil {
 				return null.BoolFromPtr(nil), errors.Wrapf(err, "Error when evaluating predicate %s", p)
 			}
@@ -110,7 +110,7 @@ func (p *CompoundPredicate) Evaluate(features map[string]interface{}) (null.Bool
 		// The operator surrogate allows for specifying surrogate predicates.
 		// They are used for cases where a missing value appears in the evaluation of the parent predicate such that an alternative predicate is available.
 		for _, predicate := range p.Predicates {
-			eval, err := (*predicate).Evaluate(features)
+			eval, err := predicate.Evaluate(features)
 			if err != nil {
 				return null.BoolFromPtr(nil), errors.Wrapf(err, "Error when evaluating predicate %s", p)
 			}

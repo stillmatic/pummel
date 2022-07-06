@@ -12,12 +12,12 @@ import (
 
 type Node struct {
 	XMLName            xml.Name
-	Predicate          *predicates.Predicate `xml:"any"`
-	ID                 string                `xml:"id,attr"`
-	Score              string                `xml:"score,attr"`
-	RecordCount        int                   `xml:"recordCount,attr"`
-	ScoreDistributions []*ScoreDistribution  `xml:"ScoreDistribution"`
-	Children           []*Node               `xml:"Node"`
+	Predicate          predicates.Predicate `xml:"any"`
+	ID                 string               `xml:"id,attr"`
+	Score              string               `xml:"score,attr"`
+	RecordCount        int                  `xml:"recordCount,attr"`
+	ScoreDistributions []*ScoreDistribution `xml:"ScoreDistribution"`
+	Children           []*Node              `xml:"Node"`
 	// DefaultChild gives the id of the child node to use when no predicates can be evaluated due to missing values.
 	// Note that only Nodes which are immediate children of the respective Node can be referenced.
 	DefaultChild string `xml:"defaultChild,attr"`
@@ -128,7 +128,7 @@ func (n *Node) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 				if err := d.DecodeElement(&p, &tt); err != nil {
 					return err
 				}
-				n.Predicate = &p
+				n.Predicate = p
 			}
 		case xml.EndElement:
 			return nil
@@ -137,7 +137,7 @@ func (n *Node) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 }
 
 func (n *Node) Evaluate(features map[string]interface{}) (null.Bool, error) {
-	res, err := (*n.Predicate).Evaluate(features)
+	res, err := n.Predicate.Evaluate(features)
 	return res, err
 }
 
