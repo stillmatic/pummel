@@ -129,7 +129,7 @@ func (sg *Segmentation) Evaluate(values map[string]interface{}) (map[string]inte
 	}
 }
 
-func (sg *Segmentation) EvaluateSum(values map[string]interface{}, targets []Target) (map[string]interface{}, error) {
+func (sg *Segmentation) EvaluateSum(values map[string]interface{}, targets []Target, outputName string) (map[string]interface{}, error) {
 	var rescaleConstant, rescaleFactor float64
 	if targets != nil {
 		rescaleConstant = targets[0].RescaleConstant
@@ -138,7 +138,6 @@ func (sg *Segmentation) EvaluateSum(values map[string]interface{}, targets []Tar
 	// assume only one target
 	out := make(map[string]interface{}, 1)
 	score := rescaleConstant
-	var outputName string
 	for _, s := range sg.Segments {
 		res, err := s.Evaluate(values)
 		if err != nil {

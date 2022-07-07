@@ -71,7 +71,7 @@ func (mm *MiningModel) Evaluate(values map[string]interface{}) (map[string]inter
 	var err error
 	switch mm.Segmentation.MultipleModelMethod {
 	case MultipleModelMethod.Sum:
-		res, err = mm.Segmentation.EvaluateSum(values, mm.Targets)
+		res, err = mm.Segmentation.EvaluateSum(values, mm.Targets, mm.GetOutputField())
 	case MultipleModelMethod.SelectFirst, MultipleModelMethod.ModelChain,
 		MultipleModelMethod.MajorityVote, MultipleModelMethod.Average:
 		res, err = mm.Segmentation.Evaluate(values)
@@ -109,5 +109,8 @@ func (mm *MiningModel) Evaluate(values map[string]interface{}) (map[string]inter
 }
 
 func (mm *MiningModel) GetOutputField() string {
+	if mm.Output != nil {
+		return mm.Output.OutputFields[0].Name
+	}
 	return mm.MiningSchema.GetOutputField()
 }

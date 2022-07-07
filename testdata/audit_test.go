@@ -199,7 +199,7 @@ func TestRFModel(t *testing.T) {
 		t.Log(res)
 		assert.NoError(t, err)
 		assert.NotNil(t, res)
-		assert.Equal(t, 0, 1)
+		// assert.Equal(t, 0, 1)
 	}
 }
 

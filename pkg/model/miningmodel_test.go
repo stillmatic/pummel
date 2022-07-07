@@ -753,6 +753,7 @@ func TestModelChain(t *testing.T) {
 	var model model.MiningModel
 	err := xml.Unmarshal(modelChainXML, &model)
 	assert.NoError(t, err)
+	assert.NotNil(t, model.Output)
 	input := map[string]interface{}{
 		"petal_length": 2.5,
 		"petal_width":  1.5,
