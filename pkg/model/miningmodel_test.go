@@ -181,10 +181,11 @@ func TestClassificationEnsembleModel(t *testing.T) {
 	seg := model.Segmentation.Segments[0]
 	assert.Equal(t, "1", seg.ID)
 	assert.Equal(t, 1, len(seg.Predicates))
-	pred := *seg.Predicates[0]
+	pred := seg.Predicates[0]
 	dummyInput := make(map[string]interface{})
-	predRes, err := pred.Evaluate(dummyInput)
-	assert.True(t, predRes.ValueOrZero())
+	predRes, ok, err := pred.Evaluate(dummyInput)
+	assert.True(t, predRes)
+	assert.True(t, ok)
 	assert.NoError(t, err)
 	// check first segment's model
 	tm := seg.ModelElement
@@ -248,7 +249,8 @@ func BenchmarkClassificationEnsembleSegmentation(b *testing.B) {
 		"sepal_width":  1.0,
 	}
 	for i := 0; i < b.N; i++ {
-		model.Segmentation.Evaluate(actualInput)
+		_, err := model.Segmentation.Evaluate(actualInput)
+		assert.NoError(b, err)
 	}
 }
 
@@ -464,7 +466,8 @@ func BenchmarkRegressionWeightedAverage(b *testing.B) {
 		"sepal_width":  3.5,
 	}
 	for i := 0; i < b.N; i++ {
-		model.Segmentation.Evaluate(inputs)
+		_, err := model.Segmentation.Evaluate(inputs)
+		assert.NoError(b, err)
 	}
 }
 
@@ -901,7 +904,8 @@ func BenchmarkGBMFixture(b *testing.B) {
 	for _, tc := range GBMFixtureCases {
 		b.Run(tc.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				mm.MiningModel.Evaluate(tc.features)
+				_, err := mm.MiningModel.Evaluate(tc.features)
+				assert.NoError(b, err)
 			}
 		})
 	}
@@ -916,7 +920,8 @@ func BenchmarkRFFixture(b *testing.B) {
 	for _, tc := range RFFixtureCases {
 		b.Run(tc.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				mm.MiningModel.Evaluate(tc.features)
+				_, err := mm.MiningModel.Evaluate(tc.features)
+				assert.NoError(b, err)
 			}
 		})
 	}

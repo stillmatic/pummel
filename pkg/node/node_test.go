@@ -77,9 +77,10 @@ func TestSimpleNode(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "0", node.Score)
 	assert.Equal(t, 1, len(node.Children))
-	res, err := node.Evaluate(map[string]interface{}{"prob1": 0.34})
+	res, ok, err := node.Evaluate(map[string]interface{}{"prob1": 0.34})
 	assert.NoError(t, err)
-	assert.True(t, res.ValueOrZero())
+	assert.True(t, res)
+	assert.True(t, ok)
 }
 
 func TestSimpleNodeMissing(t *testing.T) {
@@ -93,10 +94,10 @@ func TestSimpleNodeMissing(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "1", node.Score)
 	assert.Equal(t, 0, len(node.Children))
-	res, err := node.Evaluate(map[string]interface{}{})
+	res, ok, err := node.Evaluate(map[string]interface{}{})
 	assert.NoError(t, err)
-	assert.False(t, res.Valid)
-	assert.False(t, res.ValueOrZero())
+	assert.False(t, ok)
+	assert.False(t, res)
 }
 
 type NodeEqualityTest struct {

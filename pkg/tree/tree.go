@@ -59,11 +59,11 @@ var MissingValueStrategy = struct {
 }
 
 func (t *TreeModel) Evaluate(features map[string]interface{}) (map[string]interface{}, error) {
-	rootPredRes, err := t.Node.Evaluate(features)
+	rootPredRes, ok, err := t.Node.Evaluate(features)
 	if err != nil {
 		return nil, err
 	}
-	if !rootPredRes.Valid {
+	if !rootPredRes || !ok {
 		return nil, nil
 	}
 	curr, err := t.traverse(features)
@@ -127,12 +127,12 @@ func (t *TreeModel) traverse(features map[string]interface{}) (*node.Node, error
 	for len(curr.Children) > 0 {
 		prevNode := curr
 		for _, child := range curr.Children {
-			predRes, err := child.Evaluate(features)
+			predRes, ok, err := child.Evaluate(features)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to evaluate child %s", child)
 			}
 			// handle missing value cases
-			if !predRes.Valid {
+			if !ok {
 				switch t.MissingValueStrategy {
 				case MissingValueStrategy.LastPrediction:
 					break
@@ -148,7 +148,7 @@ func (t *TreeModel) traverse(features map[string]interface{}) (*node.Node, error
 					}
 				}
 			}
-			if predRes.Valid && predRes.Bool {
+			if predRes && ok {
 				curr = child
 				break
 			}

@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	op "github.com/stillmatic/pummel/pkg/operators"
-	"gopkg.in/guregu/null.v4"
 )
 
 // CompoundPredicate combines two or more elements.
@@ -64,62 +63,62 @@ func (cp *CompoundPredicate) UnmarshalXML(d *xml.Decoder, start xml.StartElement
 	}
 }
 
-func (p *CompoundPredicate) Evaluate(features map[string]interface{}) (null.Bool, error) {
+func (p *CompoundPredicate) Evaluate(features map[string]interface{}) (bool, bool, error) {
 	// TODO: Refactor this.
 	switch p.Operator {
 	case op.Operators.And:
 		// The operator and indicates an evaluation to TRUE if all the predicates evaluate to TRUE.
 		for _, predicate := range p.Predicates {
-			eval, err := predicate.Evaluate(features)
+			eval, ok, err := predicate.Evaluate(features)
 			if err != nil {
-				return null.BoolFromPtr(nil), errors.Wrapf(err, "Error when evaluating predicate %s", p)
+				return false, false, errors.Wrapf(err, "Error when evaluating predicate %s", p)
 			}
 			// if value is null (and this function returns False), we still return false
-			if !eval.ValueOrZero() {
-				return null.BoolFrom(false), nil
+			if !eval || !ok {
+				return false, true, nil
 			}
 		}
-		return null.BoolFrom(true), nil
+		return true, true, nil
 	case op.Operators.Or:
 		// The operator or indicates an evaluation to TRUE if one of the predicates evaluates to TRUE.
 		for _, predicate := range p.Predicates {
-			eval, err := predicate.Evaluate(features)
+			eval, _, err := predicate.Evaluate(features)
 			if err != nil {
-				return null.BoolFromPtr(nil), errors.Wrapf(err, "Error when evaluating predicate %s", p)
+				return false, false, errors.Wrapf(err, "Error when evaluating predicate %s", p)
 			}
-			// if some values are missing, we can still return true
-			if eval.ValueOrZero() {
-				return null.BoolFrom(true), nil
+			// even if some values are missing, we can still return true
+			if eval {
+				return true, true, nil
 			}
 		}
-		return null.BoolFrom(false), nil
+		return false, false, nil
 	case op.Operators.Xor:
 		// The operator xor indicates an evaluation to TRUE if an odd number of the predicates evaluates to TRUE and all others evaluate to FALSE.
 		count := 0
 		for _, predicate := range p.Predicates {
-			eval, err := predicate.Evaluate(features)
+			eval, _, err := predicate.Evaluate(features)
 			if err != nil {
-				return null.BoolFromPtr(nil), errors.Wrapf(err, "Error when evaluating predicate %s", p)
+				return false, false, errors.Wrapf(err, "Error when evaluating predicate %s", p)
 			}
-			if eval.ValueOrZero() {
+			if eval {
 				count++
 			}
 		}
-		return null.BoolFrom(count%2 == 1), nil
+		return count%2 == 1, true, nil
 	case op.Operators.Surrogate:
 		// The operator surrogate allows for specifying surrogate predicates.
 		// They are used for cases where a missing value appears in the evaluation of the parent predicate such that an alternative predicate is available.
 		for _, predicate := range p.Predicates {
-			eval, err := predicate.Evaluate(features)
+			eval, _, err := predicate.Evaluate(features)
 			if err != nil {
-				return null.BoolFromPtr(nil), errors.Wrapf(err, "Error when evaluating predicate %s", p)
+				return false, false, errors.Wrapf(err, "Error when evaluating predicate %s", p)
 			}
-			if eval.ValueOrZero() {
-				return null.BoolFrom(true), nil
+			if eval {
+				return true, true, nil
 			}
 		}
-		return null.BoolFrom(false), nil
+		return false, false, nil
 	default:
-		return null.BoolFromPtr(nil), fmt.Errorf("unsupported compound predicate operator: %s", p.Operator)
+		return false, false, fmt.Errorf("unsupported compound predicate operator: %s", p.Operator)
 	}
 }

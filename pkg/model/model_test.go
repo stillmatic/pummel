@@ -142,6 +142,7 @@ func BenchmarkTreeModel(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		tm.Evaluate(inputData)
+		_, err := tm.Evaluate(inputData)
+		assert.NoError(b, err)
 	}
 }

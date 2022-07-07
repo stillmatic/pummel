@@ -97,10 +97,10 @@ func (s *Segment) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 }
 
 func (s *Segment) Evaluate(values map[string]interface{}) (map[string]interface{}, error) {
-	// out := make(map[string]interface{})
 	for _, p := range s.Predicates {
 		// skip if predicate is not satisfied
-		if predEval, _ := p.Evaluate(values); !predEval.ValueOrZero() {
+		// TODO: maybe want the error check
+		if predEval, _, _ := p.Evaluate(values); !predEval {
 			return nil, nil
 		}
 	}

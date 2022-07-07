@@ -14,10 +14,10 @@ func TestTruePredicate(t *testing.T) {
 	var tp predicates.TruePredicate
 	err := xml.Unmarshal(truePredicateBytes, &tp)
 	assert.NoError(t, err)
-	res, err := tp.Evaluate(map[string]interface{}{"age": 30})
+	res, ok, err := tp.Evaluate(map[string]interface{}{"age": 30})
 	assert.NoError(t, err)
-	assert.True(t, res.Valid)
-	assert.True(t, res.ValueOrZero())
+	assert.True(t, ok)
+	assert.True(t, res)
 }
 
 func TestFalsePredicate(t *testing.T) {
@@ -25,10 +25,10 @@ func TestFalsePredicate(t *testing.T) {
 	var fp predicates.FalsePredicate
 	err := xml.Unmarshal(falsePredicateBytes, &fp)
 	assert.NoError(t, err)
-	res, err := fp.Evaluate(map[string]interface{}{"age": 30})
+	res, ok, err := fp.Evaluate(map[string]interface{}{"age": 30})
 	assert.NoError(t, err)
-	assert.True(t, res.Valid)
-	assert.False(t, res.ValueOrZero())
+	assert.True(t, ok)
+	assert.False(t, res)
 }
 
 type predicateInput struct {
@@ -82,11 +82,11 @@ func TestSimplePredicates(t *testing.T) {
 		if err != nil {
 			t.Fatal("could not unmarshal xml")
 		}
-		res, err := sp.Evaluate(test.inputs.features)
+		res, ok, err := sp.Evaluate(test.inputs.features)
 		assert.NoError(t, err)
-		assert.True(t, res.Valid, "expected %s %v to be true", sp.Operator, test.inputs.features)
-		assert.Equal(t, test.expected, res.ValueOrZero())
-		if res.ValueOrZero() != test.expected {
+		assert.True(t, ok, "expected %s %v to be true", sp.Operator, test.inputs.features)
+		assert.Equal(t, test.expected, res)
+		if res != test.expected {
 			t.Errorf("error comparing %v versus %v, with %s", sp.Value, test.inputs.features, sp.Operator)
 		}
 	}
@@ -122,11 +122,11 @@ func TestSimpleSetPredicates(t *testing.T) {
 		if err != nil {
 			t.Fatal("could not unmarshal xml")
 		}
-		res, err := sp.Evaluate(test.inputs.features)
+		res, ok, err := sp.Evaluate(test.inputs.features)
 		assert.NoError(t, err)
-		assert.True(t, res.Valid)
-		assert.Equal(t, test.expected, res.ValueOrZero())
-		if res.ValueOrZero() != test.expected {
+		assert.True(t, ok, "expected %s %v to be true", sp.Operator, test.inputs.features)
+		assert.Equal(t, test.expected, res)
+		if res != test.expected {
 			t.Errorf("error comparing %v versus %v, with %s", sp.Values, test.inputs.features, sp.Operator)
 		}
 	}
@@ -198,10 +198,10 @@ func TestCompoundPredicates(t *testing.T) {
 		if err != nil {
 			t.Fatal("could not unmarshal xml", err)
 		}
-		res, err := sp.Evaluate(test.inputs.features)
+		res, _, err := sp.Evaluate(test.inputs.features)
 		assert.NoError(t, err)
-		assert.Equal(t, test.expected, res.ValueOrZero())
-		if res.ValueOrZero() != test.expected {
+		assert.Equal(t, test.expected, res)
+		if res != test.expected {
 			t.Errorf("error comparing %s with %s", test.inputs.features, sp.Operator)
 		}
 	}
@@ -262,9 +262,10 @@ func TestSimplePredicatesMissing(t *testing.T) {
 			if err != nil {
 				t.Fatal("could not unmarshal xml")
 			}
-			res, err := sp.Evaluate(test.inputs.features)
+			res, ok, err := sp.Evaluate(test.inputs.features)
 			assert.NoError(t, err)
-			assert.Equal(t, res.Valid, test.expected)
+			assert.False(t, ok, "expected %s %v to be false", sp.Operator, test.inputs.features)
+			assert.Equal(t, test.expected, res)
 		})
 	}
 }
@@ -276,9 +277,10 @@ func TestSimpleSetPredicatesMissing(t *testing.T) {
 		if err != nil {
 			t.Fatal("could not unmarshal xml")
 		}
-		res, err := sp.Evaluate(test.inputs.features)
+		res, ok, err := sp.Evaluate(test.inputs.features)
 		assert.NoError(t, err)
-		assert.Equal(t, res.Valid, test.expected)
+		assert.False(t, ok, "expected %s %v to be false", sp.Operator, test.inputs.features)
+		assert.Equal(t, test.expected, res)
 	}
 }
 
@@ -290,10 +292,9 @@ func TestCompoundPredicatesMissing(t *testing.T) {
 		if err != nil {
 			t.Fatal("could not unmarshal xml", err)
 		}
-		res, err := sp.Evaluate(test.inputs.features)
+		res, _, err := sp.Evaluate(test.inputs.features)
 		assert.NoError(t, err)
-		assert.True(t, res.Valid)
-		assert.Equal(t, res.ValueOrZero(), test.expected)
+		assert.Equal(t, test.expected, res)
 	}
 }
 
@@ -304,7 +305,8 @@ func BenchmarkCompoundPredicates(b *testing.B) {
 		xml.Unmarshal(test.inputs.bytes, &sp)
 		b.Run(fmt.Sprintf("test_%v", i), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				sp.Evaluate(test.inputs.features)
+				_, _, err := sp.Evaluate(test.inputs.features)
+				assert.NoError(b, err)
 			}
 		})
 
@@ -318,7 +320,8 @@ func BenchmarkSimpleSetPredicates(b *testing.B) {
 		xml.Unmarshal(test.inputs.bytes, &sp)
 		b.Run(fmt.Sprintf("test_%v", i), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				sp.Evaluate(test.inputs.features)
+				_, _, err := sp.Evaluate(test.inputs.features)
+				assert.NoError(b, err)
 			}
 		})
 	}
@@ -331,7 +334,8 @@ func BenchmarkSimplePredicates(b *testing.B) {
 		xml.Unmarshal(test.inputs.bytes, &sp)
 		b.Run(fmt.Sprintf("test_%v", i), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				sp.Evaluate(test.inputs.features)
+				_, _, err := sp.Evaluate(test.inputs.features)
+				assert.NoError(b, err)
 			}
 		})
 	}

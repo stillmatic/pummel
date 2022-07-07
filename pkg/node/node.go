@@ -7,7 +7,6 @@ import (
 
 	"github.com/stillmatic/pummel/pkg/predicates"
 	"golang.org/x/exp/slices"
-	"gopkg.in/guregu/null.v4"
 )
 
 type Node struct {
@@ -136,9 +135,8 @@ func (n *Node) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	}
 }
 
-func (n *Node) Evaluate(features map[string]interface{}) (null.Bool, error) {
-	res, err := n.Predicate.Evaluate(features)
-	return res, err
+func (n *Node) Evaluate(features map[string]interface{}) (bool, bool, error) {
+	return n.Predicate.Evaluate(features)
 }
 
 func (n *Node) GetDefaultChild() (*Node, error) {

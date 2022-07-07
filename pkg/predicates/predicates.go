@@ -2,12 +2,15 @@ package predicates
 
 import (
 	"encoding/xml"
-
-	"gopkg.in/guregu/null.v4"
 )
 
+// Predicates are logical expressions which define the rule for choosing the Node
+// If the result is true, evaluate the node
+// If the result is false, do not evaluate the node
+// If the result is null, use the tree's missing value strategy
+// returns val, ok, err
 type Predicate interface {
-	Evaluate(map[string]interface{}) (null.Bool, error)
+	Evaluate(map[string]interface{}) (bool, bool, error)
 	String() string
 }
 
@@ -21,12 +24,12 @@ type FalsePredicate struct {
 	XMLName xml.Name `xml:"False"`
 }
 
-func (p *TruePredicate) Evaluate(map[string]interface{}) (null.Bool, error) {
-	return null.BoolFrom(true), nil
+func (p *TruePredicate) Evaluate(map[string]interface{}) (bool, bool, error) {
+	return true, true, nil
 }
 
-func (p *FalsePredicate) Evaluate(map[string]interface{}) (null.Bool, error) {
-	return null.BoolFrom(false), nil
+func (p *FalsePredicate) Evaluate(map[string]interface{}) (bool, bool, error) {
+	return false, true, nil
 }
 
 func (p *TruePredicate) String() string {
