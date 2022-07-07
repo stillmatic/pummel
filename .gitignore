@@ -34,3 +34,5 @@ it*/state
 go.work
 
 *.prof
+
+testdata/internaldata

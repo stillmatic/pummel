@@ -25,7 +25,7 @@ type TreeModel struct {
 	Output               *fields.Outputs  `xml:"Output"`
 }
 
-// generate an enum struct for MissingValueStrategy
+// MissingValueStrategy is an enum struct
 var MissingValueStrategy = struct {
 	// evaluation is stopped and the current winner is returned as the final prediction.
 	LastPrediction string
