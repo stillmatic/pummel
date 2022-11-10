@@ -12,7 +12,8 @@ BenchmarkAuditLR-10                	  774922	      1553 ns/op	     797 B/op	    
 BenchmarkAuditLRConcurrently-10    	  934758	      1184 ns/op	     853 B/op	      21 allocs/op
 BenchmarkAuditRF-10                	    9090	    124334 ns/op	   34987 B/op	     516 allocs/op
 BenchmarkAuditRFConcurrently-10    	   56708	     20299 ns/op	   27763 B/op	     361 allocs/op
-PASS```
+PASS
+```
 
 Alternatively, we can consider a benchmark where we instead process 10k rows in a row (to control for warming up effect). That yields a similar 1556 ns/row. In particular, it means we do not have cold start problems (assuming the model is kept in memory).
 
