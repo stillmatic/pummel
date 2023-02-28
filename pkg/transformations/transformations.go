@@ -216,7 +216,9 @@ func (fr *FieldRef) Transform(values map[string]interface{}) (interface{}, error
 		return nil, errors.New("missing field " + fr.Field)
 	}
 	switch fr.DataType {
-	case "float", "double":
+	case "float":
+		return InterfaceToFloat32(value)
+	case "double":
 		return InterfaceToFloat64(value)
 	default:
 		return value, nil
@@ -235,6 +237,8 @@ func (c *Constant) Transform(values map[string]interface{}) (interface{}, error)
 	switch c.DataType {
 	case "double":
 		return c.Value.(float64), nil
+	case "float":
+		return c.Value.(float32), nil
 	}
 	return c.Value, nil
 }
@@ -328,6 +332,22 @@ func InterfaceToFloat64(val interface{}) (float64, error) {
 			return 0, err
 		}
 		return parsed, nil
+	}
+	return 0, nil
+}
+
+func InterfaceToFloat32(val interface{}) (float32, error) {
+	switch val := val.(type) {
+	case float32:
+		return float32(val), nil
+	case int:
+		return float32(val), nil
+	case string:
+		parsed, err := strconv.ParseFloat(val, 32)
+		if err != nil {
+			return 0, err
+		}
+		return float32(parsed), nil
 	}
 	return 0, nil
 }
